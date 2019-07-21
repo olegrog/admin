@@ -14,23 +14,23 @@ declare -xr NC='\033[0m'
 
 header="# (cdmm cluster) $(printf '%(%Y-%m-%d)T\n' -1)"
 server=10.16.74.203
+ldap_base="dc=cdmm,dc=skoltech,dc=ru"
 admin=o.rogozin
+nfs_mounts=(opt home)
 
 _log() { echo -e "$WHITE -- $*.$NC"; }
-_topic() { echo -e "$YELLOW=== $* ===$NC"; }
+_topic() { echo -e "===$YELLOW $* $NC"===; }
+_fatal() { echo -e "===$RED Failed! $NC==="; exit 1; }
 
 _install() {
     declare -a packages not_installed
     for arg; do case $arg in
-        --reconfigure) local reconfigure=1;;
+        --collection=*) local collection=${arg#*=};;
         *) packages+=("$arg");;
     esac; done
     for pkg in "${packages[@]}"; do
         if dpkg -s "$pkg" > /dev/null 2>&1; then
-            if [[ $reconfigure ]]; then
-                _log "Package $MAGENTA$pkg$WHITE is reconfigured"
-                dpkg-reconfigure -fnoninteractive "$pkg"
-            else
+            if [[ -z "$collection" ]]; then
                 _log "Package $MAGENTA$pkg$WHITE is already installed"
             fi
         else
@@ -40,6 +40,8 @@ _install() {
     if [[ ${#not_installed} -gt 0 ]]; then
         _log "Install $MAGENTA${not_installed[*]}$WHITE"
         apt-get install -y "${not_installed[@]}"
+    elif [[ "$collection" ]]; then
+        _log "Package collection $MAGENTA$collection$WHITE is already installed"
     fi
 }
 
@@ -70,32 +72,34 @@ configure_ssh() {
 configure_ldap() {
     _topic "Configure LDAP client for NSS"
     _log "Set DebConf selections"
-    echo PURGE | debconf-communicate ldap-auth-config > /dev/null
     cat <<EOF | debconf-set-selections
-ldap-auth-config    ldap-auth-config/ldapns/base-dn     string      dc=cdmm,dc=skoltech,dc=ru
-ldap-auth-config    ldap-auth-config/ldapns/ldap-server string      ldap://$server
-ldap-auth-config    ldap-auth-config/dbrootlogin        boolean     false
-libnss-ldapd        libnss-ldapd/nsswitch               multiselect passwd, group, shadow, hosts
+nslcd	        nslcd/ldap-base	string  $ldap_base
+nslcd	        nslcd/ldap-uris	string	ldap://$server
+libnss-ldapd    libnss-ldapd/nsswitch   multiselect passwd, group, shadow, hosts
 EOF
-    _install --reconfigure ldap-auth-config
-    _install --reconfigure libnss-ldapd
+    _install libnss-ldapd
     if ! grep -q "hosts: *files ldap" /etc/nsswitch.conf; then
         _log "Set LDAP priority higher than DNS for host NSS"
         sed -i 's/^hosts:\( *\)files \(.*\) ldap$/hosts:\1files ldap \2/' /etc/nsswitch.conf
     fi
     if grep -q "pam_unix.so" /etc/pam.d/common-*; then
-        _log "Disable UNIX authentication"
-        sed -i '/.*pam_unix.so.*/d' /etc/pam.d/common-*
+        _log "Update authentication rules"
+        # Prevent UNIX authentication when password is changing
+        sed -i 's/use_authtok //g' /etc/pam.d/common-password
         DEBIAN_FRONTEND=noninteractive pam-auth-update
     fi
+    _log "Check if LDAP databases are included in NSS lookups"
+    [[ -z $(getent -s 'dns ldap' hosts) ]] && _fatal
+    _log "Remove cache of Name Service Caching Daemon"
+    rm -f /var/cache/nscd/*
 }
 
 configure_nfs() {
     _topic "Configure NFS and autofs"
     _install nfs-common autofs
-    for dir in home opt; do
+    for dir in "${nfs_mounts[@]}"; do
         _append /etc/auto.master "$(printf '%-8s%s\n' "/$dir" "/etc/auto.$dir")"
-        _append /etc/auto.$dir "$(printf '%-4s%s\n' "*" "$server:/$dir/&")"
+        _append "/etc/auto.$dir" "$(printf '%-4s%s\n' "*" "$server:/$dir/&")"
     done
     if [[ $(find /home -maxdepth 1 | wc -l) -gt 1 ]]; then
         if ! mount | grep -q "on /home "; then
@@ -105,6 +109,10 @@ configure_nfs() {
         fi
     fi
     systemctl reload autofs
+    for dir in "${nfs_mounts[@]}"; do
+        _log "Wait until /$dir is mounted"
+        until mount | grep -q "/etc/auto.$dir"; do sleep 0.1; done
+    done
 }
 
 configure_admins() {
@@ -117,20 +125,24 @@ configure_admins() {
     chmod 700 /root/.ssh
     admin_key=$(cat /home/$admin/.ssh/id_rsa.pub)
     _append /root/.ssh/authorized_keys "$admin_key"
-    chmod 500 /root/.ssh/authorized_keys
+    chmod 600 /root/.ssh/authorized_keys
 }
 
-install_utils() {
-    _topic "Install additional utils"
-    _install environment-modules ack vim htop aptitude snapd
+install_software() {
+    _topic "Install additional software"
+    _install environment-modules
     _append /etc/environment-modules/modulespath /opt/modules
-    _install python3-numpy python3-scipy python3-sympy python3-matplotlib
-    _install openmpi-common libopenmpi-dev
+    _install --collection=Auxiliary \
+        ack vim htop aptitude snapd telegram-desktop
+    _install --collection=Python3 \
+        python3-numpy python3-scipy python3-sympy python3-matplotlib
+    _install --collection=MPI \
+        openmpi-common libopenmpi-dev
 }
 
 configure_ssh
 configure_ldap
 configure_nfs
 configure_admins
-install_utils
+install_software
 _topic "All work has been successfully completed"

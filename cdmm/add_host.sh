@@ -24,7 +24,7 @@ add_ldap_record() {
 }
 
 update_ssh_known_hosts() {
-    for user in $(getent -s 'dns ldap' passwd | awk -F: '{ print $1 }'); do
+    for user in root $(getent -s 'dns ldap' passwd | awk -F: '{ print $1 }'); do
         known_hosts=/home/$user/.ssh/known_hosts
         echo " -- Update $known_hosts"
         for hostname in $host $ip; do
