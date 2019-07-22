@@ -1,6 +1,6 @@
 #!/bin/bash
 
-[[ $# -eq 1 ]] || { echo "Usage: $(basename "$0") <user>"; exit 1; }
+[[ $# -eq 1 ]] || { echo "Usage: ./$(basename "$0") <user>"; exit 1; }
 [[ $EUID -eq 0 ]] || { echo "Run with sudo."; exit 1; }
 
 user=$1

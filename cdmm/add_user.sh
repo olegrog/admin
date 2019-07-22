@@ -11,7 +11,6 @@ EOF
 }
 
 # Constants
-admin=o.rogozin
 group=cdmm
 ldap_base="dc=cdmm,dc=skoltech,dc=ru"
 
@@ -21,7 +20,7 @@ for arg; do case $arg in
     *)                  name+=("$arg");;
 esac; done
 
-[[ ${#name[@]} -eq 2 ]] || { echo "Provide both first and last names."; print_help; exit 1; }
+[[ ${#name[@]} -eq 2 ]] || { echo "Provide both first and last names."; print_help; }
 [[ $EUID -eq 0 ]] || { echo "Run with sudo."; exit 1; }
 
 read -r first_name last_name <<< "${name[@]}"
@@ -32,15 +31,15 @@ last_name=${2,,}
 user="${first_name::1}.$last_name"
 # Public key should be placed in this file
 pubkey="$(dirname "$0")/public_keys/$user.pem"
-home=/home/$user
-firstuid=$(id -u "$admin")
+face="$(dirname "$0")/faces/$user.jpg"
+firstuid=$(getent -s ldap passwd | head -1 | awk -F: '{ print $3 }')
 
 [[ -f $pubkey ]] || { echo "File $pubkey is not found."; exit 1; }
 
 check_host_reachability() {
     local err
     # Iterate over all hosts registered in LDAP, but not in /etc/hosts
-    for host in $(getent -s 'dns ldap' hosts | awk '{ print $2 }'); do
+    for host in $(getent -s ldap hosts | awk '{ print $2 }'); do
         printf ' -- Check if %s is reachable...' "$host"
         # Check whether SSH port is open
         if nc -z -w 2 "$host" 22; then
@@ -61,7 +60,8 @@ add_user() {
         --gecos "${first_name^} ${last_name^}"
     )
     adduser "${adduser_options[@]}" "$user"
-    chmod o-rx "/home/$user"
+    home=$(getent passwd "$user" | cut -d: -f6)
+    chmod o-rx "$home"
     # We can set empty UNIX password, but only non-empty LDAP password
     password=$(pwgen -N1 -s)
     echo "$user:$password" | chpasswd
@@ -71,11 +71,15 @@ add_user() {
     /usr/share/migrationtools/migrate_passwd.pl <(grep "$user" /etc/passwd) \
         | ldapadd -x -D "cn=admin,$ldap_base" -y /etc/ldap.secret
     userdel -f "$user"
-    for host in $(getent -s 'dns ldap' hosts | awk '{ print $2 }'); do
+    for host in $(getent -s ldap hosts | awk '{ print $2 }'); do
         [[ "$(hostname)" == "$host" ]] && continue
         echo " -- Restart AutoFS on $host"
         ssh "$host" systemctl restart autofs
     done
+    if [[ -f $face ]]; then
+        echo " -- Add avatar"
+        cp "$face" "$home/.face"
+    fi
 }
 
 configure_ssh_directory() {
@@ -88,11 +92,15 @@ configure_ssh_directory() {
         touch ~/.ssh/known_hosts
 EOF
     # Append fingerprints of all hosts registered in LDAP (for ip and hostname)
-    for hostname in $(getent -s 'dns ldap' hosts); do
+    for hostname in $(getent -s ldap hosts); do
         ssh-keyscan -t ecdsa-sha2-nistp256 "$hostname" >> "$home/.ssh/known_hosts"
     done
 }
 
-check_host_reachability
-add_user
-configure_ssh_directory
+read -p "Are you sure to add $first_name $last_name as user $user (y/n)? " -n 1 -r
+echo
+if [[ $REPLY =~ ^[Yy]$ ]]; then
+    check_host_reachability
+    add_user
+    configure_ssh_directory
+fi
