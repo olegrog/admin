@@ -134,10 +134,16 @@ install_software() {
     _append /etc/environment-modules/modulespath /opt/modules
     _install --collection=Auxiliary \
         ack vim htop aptitude snapd telegram-desktop
+    _install --collection=Development \
+        g++ gfortran valgrind git subversion cmake flex
+    _install --collection=Multimedia \
+        ffmpeg imagemagick gnuplot smpeg-plaympeg graphviz
     _install --collection=Python3 \
-        python3-numpy python3-scipy python3-sympy python3-matplotlib
+        python3-pip python3-numpy python3-scipy python3-sympy python3-matplotlib
     _install --collection=MPI \
         openmpi-common libopenmpi-dev
+    _install --collection="for Basilisk" \
+        darcs gifsicle pstoedit swig libpython-dev libglu1-mesa-dev libosmesa6-dev
 }
 
 configure_ssh
