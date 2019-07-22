@@ -1,6 +1,6 @@
 #!/bin/bash -e
 
-[[ $# -eq 0 ]] || { echo "Usage: $(basename "$0")"; exit 1; }
+[[ $# -eq 0 ]] || { echo "Usage: ./$(basename "$0")"; exit 1; }
 [[ $EUID -eq 0 ]] || { echo "Run with sudo."; exit 1; }
 
 declare -xr RED='\033[1;31m'
@@ -21,6 +21,8 @@ nfs_mounts=(opt home)
 _log() { echo -e "$WHITE -- $*.$NC"; }
 _topic() { echo -e "===$YELLOW $* $NC"===; }
 _fatal() { echo -e "===$RED Failed! $NC==="; exit 1; }
+_line() { printf '=%.0s' $(seq -7 ${#1}); printf '\n'; }
+_block() { _line "$1"; echo -e "=== ${BLUE}$1${NC} ==="; _line "$1"; }
 
 _install() {
     declare -a packages not_installed
@@ -82,23 +84,24 @@ EOF
         _log "Set LDAP priority higher than DNS for host NSS"
         sed -i 's/^hosts:\( *\)files \(.*\) ldap$/hosts:\1files ldap \2/' /etc/nsswitch.conf
     fi
-    if grep -q "pam_unix.so" /etc/pam.d/common-*; then
-        _log "Update authentication rules"
+    if grep -q "use_authtok" /etc/pam.d/common-*; then
+        _log "Update PAM rules"
         # Prevent UNIX authentication when password is changing
         sed -i 's/use_authtok //g' /etc/pam.d/common-password
         DEBIAN_FRONTEND=noninteractive pam-auth-update
     fi
     _log "Check if LDAP databases are included in NSS lookups"
-    [[ -z $(getent -s 'dns ldap' hosts) ]] && _fatal
+    [[ -z $(getent -s ldap hosts) ]] && _fatal
     _log "Remove cache of Name Service Caching Daemon"
     rm -f /var/cache/nscd/*
+    systemctl restart nscd
 }
 
 configure_nfs() {
     _topic "Configure NFS and autofs"
     _install nfs-common autofs
     for dir in "${nfs_mounts[@]}"; do
-        _append /etc/auto.master "$(printf '%-8s%s\n' "/$dir" "/etc/auto.$dir")"
+        _append /etc/auto.master "$(printf '%-8s%s\n' "/$dir" "/etc/auto.$dir --timeout=100000")"
         _append "/etc/auto.$dir" "$(printf '%-4s%s\n' "*" "$server:/$dir/&")"
     done
     if [[ $(find /home -maxdepth 1 | wc -l) -gt 1 ]]; then
@@ -116,10 +119,11 @@ configure_nfs() {
 }
 
 configure_admins() {
+    local admin_key
     _topic "Configure admin permissions"
     if ! groups $admin | grep -q sudo; then
         _log "Add $admin to sudoers"
-        usermod -a -G sudo o.rogozin
+        usermod -a -G sudo "$admin"
     fi
     mkdir -p /root/.ssh
     chmod 700 /root/.ssh
@@ -132,8 +136,9 @@ install_software() {
     _topic "Install additional software"
     _install environment-modules
     _append /etc/environment-modules/modulespath /opt/modules
+    _append /etc/bash.bashrc ". /etc/profile.d/modules.sh"
     _install --collection=Auxiliary \
-        ack vim htop aptitude snapd telegram-desktop
+        ack vim htop tcl aptitude snapd telegram-desktop
     _install --collection=Development \
         g++ gfortran valgrind git subversion cmake flex
     _install --collection=Multimedia \
@@ -146,9 +151,31 @@ install_software() {
         darcs gifsicle pstoedit swig libpython-dev libglu1-mesa-dev libosmesa6-dev
 }
 
-configure_ssh
-configure_ldap
-configure_nfs
-configure_admins
-install_software
-_topic "All work has been successfully completed"
+# Just check if LDAP server is active
+if systemctl is-active -q slapd; then
+    # We are on the server host
+    read -p "Are you sure to reconfigure all clients (y/n)? " -n 1 -r
+    echo
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        for host in $(getent -s ldap hosts | awk '{ print $2 }'); do
+            [[ $(hostname) == "$host" ]] && continue
+            _block "Configure $host"
+            #shellcheck disable=SC2029
+            ssh "$host" "$(realpath "$0")"
+        done
+    fi
+else
+    # We are on a client host
+    if [[ $- == *i* ]]; then
+        # We are in the interactive mode
+        read -p "Are you sure to configure $(hostname) (y/n)? " -n 1 -r
+        echo
+        [[ $REPLY =~ ^[Yy]$ ]] || exit
+    fi
+    configure_ssh
+    configure_ldap
+    configure_nfs
+    configure_admins
+    install_software
+    _topic "All work has been successfully completed"
+fi
