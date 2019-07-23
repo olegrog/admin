@@ -17,10 +17,11 @@ server=10.16.74.203
 ldap_base="dc=cdmm,dc=skoltech,dc=ru"
 admin=o.rogozin
 nfs_mounts=(opt home)
+config=/opt/_config
 
 _log() { echo -e "$WHITE -- $*.$NC"; }
+_err() { echo -e "$RED -- $*.$NC"; exit 1; }
 _topic() { echo -e "===$YELLOW $* $NC"===; }
-_fatal() { echo -e "===$RED Failed! $NC==="; exit 1; }
 _line() { printf '=%.0s' $(seq -7 ${#1}); printf '\n'; }
 _block() { _line "$1"; echo -e "=== ${BLUE}$1${NC} ==="; _line "$1"; }
 
@@ -50,13 +51,23 @@ _install() {
 _append() {
     local file=$1
     local line=$2
-    [[ -z "$line" ]] && { echo "An empty string is provided."; exit 1; }
+    [[ -z "$line" ]] && _err "An empty string is provided"
     # Write a header for all amendments to config files
     [[ -f "$file" ]] || echo "$header" > "$file"
     grep -q "$header" "$file" || { echo >> "$file"; echo "$header" >> "$file"; }
     if ! grep -q "$line" "$file"; then
         _log "Append to $MAGENTA$file$WHITE"
         echo -e "$line" >> "$file"
+    fi
+}
+
+_copy() {
+    local file=$1
+    local dest=$2
+    [[ -f "$config/$file" ]] || _err "File $config/$file is absent"
+    if ! [[ -f "$dest/$file" ]]; then
+        _log "File $MAGENTA$dest/$file$WHITE is created"
+        cp "$config/$file" $dest
     fi
 }
 
@@ -91,7 +102,7 @@ EOF
         DEBIAN_FRONTEND=noninteractive pam-auth-update
     fi
     _log "Check if LDAP databases are included in NSS lookups"
-    [[ -z $(getent -s ldap hosts) ]] && _fatal
+    [[ -z $(getent -s ldap hosts) ]] && _err "Failed"
     _log "Remove cache of Name Service Caching Daemon"
     rm -f /var/cache/nscd/*
     systemctl restart nscd
@@ -149,6 +160,7 @@ install_software() {
         openmpi-common libopenmpi-dev
     _install --collection="for Basilisk" \
         darcs gifsicle pstoedit swig libpython-dev libglu1-mesa-dev libosmesa6-dev
+    _copy Mathematica.desktop /usr/share/applications
 }
 
 # Just check if LDAP server is active
