@@ -13,8 +13,8 @@ configure_ssh() {
     if ! grep -q "^$pa no" /etc/ssh/sshd_config; then
         _log "Forbid SSH authentication by password"
         sed -i "s/#$pa yes/$pa no/" /etc/ssh/sshd_config
+        systemctl reload sshd
     fi
-    systemctl reload sshd
 }
 
 configure_ldap() {
@@ -37,8 +37,7 @@ EOF
         # Update PAM automatically to ensure correctness of /etc/pam.d/* files
         DEBIAN_FRONTEND=noninteractive pam-auth-update
     fi
-    _log "Check if LDAP databases are included in NSS lookups"
-    [[ -z $(getent -s ldap hosts) ]] && _err "Failed"
+    [[ -z $(getent -s ldap hosts) ]] && _err "LDAP databases are not included in NSS lookups"
     _restart_nscd
 }
 
@@ -78,6 +77,30 @@ configure_admins() {
     chmod 600 /root/.ssh/authorized_keys
 }
 
+configure_local_home() {
+    _topic "Set up $LOCAL_HOME"
+    local root_device
+    get_device() {
+        basename "$(mount | grep " $1 " | cut -f1 -d' ' | sed 's/[0-9]*//g')"
+    }
+    [[ -d "$LOCAL_HOME" ]] || { _warn "Directory $LOCAL_HOME does not exists"; return; }
+    root_device=$(get_device '/');
+    if [[ -d "/sys/block/"$root_device"" \
+        && "$(cat /sys/block/"$root_device"/queue/rotational)" -eq 0 ]]; then
+        _log "System is installed on the SSD drive"
+        grep -v '^#' /etc/fstab | grep -q "$LOCAL_HOME" \
+            || _err "There is no $LOCAL_HOME in /etc/fstab"
+    fi
+    for user in $(getent -s ldap passwd | awk -F: '{ print $1 }'); do
+        [[ "$(id -gn "$user")" == "$GROUP" ]] || continue
+        if ! [[ -d "$LOCAL_HOME/$user" ]]; then
+            _log "Create $LOCAL_HOME/$user"
+            mkdir -p "$LOCAL_HOME/$user"
+        fi
+        chown "$user:$GROUP" "$LOCAL_HOME/$user"
+    done
+}
+
 install_software() {
     _topic "Install additional software"
     _install environment-modules
@@ -91,7 +114,7 @@ install_software() {
     _append /etc/profile.d/pdsh.sh "export WCOLL=$CONFIG/hosts"
     _append /etc/bash.bashrc ". /etc/profile.d/pdsh.sh"
     _install --collection=Development \
-        g++ gfortran clang clang-tools valgrind git subversion cmake flex
+        g++-8 gfortran-8 clang-8 clang-tools-8 valgrind git subversion cmake flex
     _install --collection=Multimedia \
         ffmpeg imagemagick smpeg-plaympeg graphviz vlc
     _install --collection=Visualization \
@@ -126,6 +149,7 @@ if ! _is_server; then
     configure_ldap
     configure_nfs
     configure_admins
+    configure_local_home
 fi
 install_software
 _topic "All work has been successfully completed"
