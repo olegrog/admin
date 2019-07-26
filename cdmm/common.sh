@@ -16,6 +16,7 @@ declare -xr LDAP_BASE="dc=cdmm,dc=skoltech,dc=ru"
 declare -xr ADMIN=o.rogozin
 declare -xr GROUP=cdmm
 declare -xr CONFIG=/opt/_config
+declare -xr LOCAL_HOME=/home-local
 
 _log() { echo -e "--$WHITE $*.$NC"; }
 _err() { echo -e "--$RED $*.$NC"; exit 1; }
