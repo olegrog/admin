@@ -10,9 +10,7 @@ EOF
     exit 1;
 }
 
-# Constants
-group=cdmm
-ldap_base="dc=cdmm,dc=skoltech,dc=ru"
+group=$GROUP
 
 for arg; do case $arg in
     --group=*)          group="${arg#*=}";;
@@ -22,6 +20,9 @@ esac; done
 
 [[ ${#name[@]} -eq 2 ]] || { echo "Provide both first and last names."; print_help; }
 [[ $EUID -eq 0 ]] || { echo "Run with sudo."; exit 1; }
+
+# shellcheck source=./common.sh
+source "$(dirname "$0")/common.sh"
 
 read -r first_name last_name <<< "${name[@]}"
 # Make all letters lowercase
@@ -34,7 +35,8 @@ pubkey="$(dirname "$0")/public_keys/$user.pem"
 face="$(dirname "$0")/faces/$user.jpg"
 firstuid=$(getent -s ldap passwd | head -1 | awk -F: '{ print $3 }')
 
-[[ -f $pubkey ]] || { echo "File $pubkey is not found."; exit 1; }
+[[ -f $pubkey ]] || _err "File $pubkey is not found"
+[[ -f $face ]] || _warn "File $face is not found"
 
 check_host_reachability() {
     local err
@@ -52,7 +54,9 @@ check_host_reachability() {
     [[ -z $err ]] || exit 1
 }
 
-add_user() {
+register_user() {
+    _topic "Register a new user"
+    _log "Add an UNIX user"
     adduser_options=(
         --disabled-login        # disable login until a password is set
         --ingroup "$group"
@@ -61,29 +65,27 @@ add_user() {
     )
     adduser "${adduser_options[@]}" "$user"
     home=$(getent passwd "$user" | cut -d: -f6)
-    chmod o-rx "$home"
+    chmod o-r "$home"
     # We can set empty UNIX password, but only non-empty LDAP password
     password=$(pwgen -N1 -s)
-    echo "$user:$password" | chpasswd
-    echo " -- Password for $user: $password"
+    chpasswd <<< "$user:$password"
+    _log "Password for $user: $GREEN$password$NC"
     # Force user to set password during the first login
     passwd -e "$user"
+    _log "Migrate the UNIX user to LDAP"
     /usr/share/migrationtools/migrate_passwd.pl <(grep "$user" /etc/passwd) \
-        | ldapadd -x -D "cn=admin,$ldap_base" -y /etc/ldap.secret
+        | ldapadd -x -D "cn=admin,$LDAP_BASE" -y /etc/ldap.secret
     userdel -f "$user"
     for host in $(getent -s ldap hosts | awk '{ print $2 }'); do
         [[ "$(hostname)" == "$host" ]] && continue
-        echo " -- Restart AutoFS on $host"
+        _log "Restart AutoFS on $host"
         ssh "$host" systemctl restart autofs
     done
-    if [[ -f $face ]]; then
-        echo " -- Add avatar"
-        cp "$face" "$home/.face"
-    fi
 }
 
 configure_ssh_directory() {
-    echo " -- Configure SSH"
+    _topic "Configure SSH"
+    _log "Provide passwordless SSH connection"
     su "$user" << EOF
         cat /dev/zero | ssh-keygen -t rsa -P ""
         cat "$pubkey" > ~/.ssh/authorized_keys
@@ -91,16 +93,25 @@ configure_ssh_directory() {
         chmod 600 ~/.ssh/authorized_keys
         touch ~/.ssh/known_hosts
 EOF
-    # Append fingerprints of all hosts registered in LDAP (for ip and hostname)
+    _log "Save fingerprints of all hosts"
     for hostname in $(getent -s ldap hosts); do
+        # Iterate over both ip and hostname
         ssh-keyscan -t ecdsa-sha2-nistp256 "$hostname" >> "$home/.ssh/known_hosts"
     done
 }
 
-read -p "Are you sure to add $first_name $last_name as user $user (y/n)? " -n 1 -r
-echo
-if [[ $REPLY =~ ^[Yy]$ ]]; then
-    check_host_reachability
-    add_user
+generate_additional_files() {
+    _topic "Additional files"
+    if [[ -f $face ]]; then
+        _log "Add avatar"
+        cp "$face" "$home/.face"
+        chown "$user:$group" "$home/.face"
+    fi
+}
+
+if _ask_user "add $first_name $last_name as user $user"; then
+    check_host_reachability # we need it to capture fingerprint of all SSH servers
+    register_user
     configure_ssh_directory
+    generate_additional_files
 fi
