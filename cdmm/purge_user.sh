@@ -5,15 +5,19 @@
 
 user=$1
 
-getent passwd | grep "$user" || { echo "User $user is not registered."; exit 1; }
+# shellcheck source=./common.sh
+source "$(dirname "$0")/common.sh"
 
-read -p "Are you sure to delete $user and all his/her files (y/n)? " -n 1 -r
-echo
-if [[ $REPLY =~ ^[Yy]$ ]]; then
-    set -v
+getent passwd | grep "$user" || _err "User $user is not registered"
+
+if _ask_user "delete $user and all his/her files"; then
+    _log "Kill all user processes"
     killall -9 -u "$user"
-    userdel -rf "$user"
-    ldapdeleteuser "$user"
-    rm -rf "/home/${user:?}"
+    _log "Delete UNIX credentials"
+    userdel -rf "$user" || _failed
+    _log "Delete LDAP credentials"
+    ldapdeleteuser "$user" || _failed
+    _log "Delete user files"
+    rm -r "/home/${user:?}" || _failed
 fi
 
