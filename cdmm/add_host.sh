@@ -24,7 +24,7 @@ add_ldap_record() {
     ldapsearch -x -LLL -b "cn=$ahost,$ldap_hosts" \
         | sed "s/$ahost/$host/; s/$aip/$ip/" \
         | ldapadd -x -D "cn=admin,$LDAP_BASE" -y /etc/ldap.secret
-    _restart_nscd
+    _restart nscd
 }
 
 update_ssh_known_hosts() {
