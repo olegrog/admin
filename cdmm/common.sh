@@ -2,11 +2,11 @@
 
 # Colors
 declare -xr RED='\033[1;31m'        # for errors
-declare -xr GREEN='\033[1;32m'
+declare -xr GREEN='\033[1;32m'      # for host names
 declare -xr YELLOW='\033[1;33m'     # for highlighing
 declare -xr BLUE='\033[1;34m'       # for file names
-declare -xr MAGENTA='\033[1;35m'    # for packages
-declare -xr CYAN='\033[1;36m'       # for blocks
+declare -xr MAGENTA='\033[1;35m'    # for package names
+declare -xr CYAN='\033[1;36m'       # for daemon names
 declare -xr WHITE='\033[1;97m'      # for logging
 declare -xr NC='\033[0m'
 
@@ -24,7 +24,7 @@ _warn() { echo -e "--$RED $*.$NC"; }
 _failed() { echo -e "--$RED Failed!$NC"; }
 _topic() { echo -e "===$YELLOW $* $NC"===; }
 _line() { printf '=%.0s' $(seq -7 ${#1}); printf '\n'; }
-_block() { _line "$1"; echo -e "=== ${CYAN}$1${NC} ==="; _line "$1"; }
+_block() { _line "$1 $2"; echo -e "=== $1 $GREEN$2$NC ==="; _line "$1 $2"; }
 _is_server() { systemctl is-active -q slapd; } # Checks if LDAP server is active
 
 _install() {
@@ -77,7 +77,7 @@ _purge() {
     if grep -q "$pattern" "$file"; then
         tmp=$(mktemp)
         grep -v "$pattern" "$file" > "$tmp"
-        diff "$file" "$tmp" || _log "Purge $BLUE$file$WHITE"
+        colordiff "$file" "$tmp" || _log "Purge $BLUE$file$WHITE"
         cp "$tmp" "$file"; rm "$tmp"
     fi
 }
@@ -86,10 +86,12 @@ _copy() {
     local file=$1
     local src="$CONFIG/$file"
     [[ -f "$src" ]] || _err "File $src is absent"
-    if ! [[ -f "$file" ]]; then
+    if [[ -f "$file" ]]; then
+        colordiff "$file" "$src" || _log "File $BLUE$file$WHITE is replaced"
+    else
         _log "File $BLUE$file$WHITE is copied"
-        cp "$src" "$file"
     fi
+    cp "$src" "$file"
 }
 
 _ask_user() {
@@ -99,8 +101,12 @@ _ask_user() {
     [[ $REPLY =~ ^[Yy]$ ]]
 }
 
-_restart_nscd() {
-    _log "Remove cache of Name Service Caching Daemon"
-    rm -f /var/cache/nscd/*
-    systemctl restart nscd
+_restart() {
+    local service=$1
+    if [[ -d "/var/cache/$service" ]]; then
+        _log "Remove cache of $CYAN$service$WHITE"
+        rm -rf /var/cache/$service/*
+    fi
+    _log "Restart daemon $CYAN$service$WHITE"
+    systemctl restart "$service"
 }

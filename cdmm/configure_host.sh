@@ -38,7 +38,7 @@ EOF
         DEBIAN_FRONTEND=noninteractive pam-auth-update
     fi
     [[ -z $(getent -s ldap hosts) ]] && _err "LDAP databases are not included in NSS lookups"
-    _restart_nscd
+    _restart nscd
 }
 
 configure_nfs() {
@@ -107,12 +107,14 @@ install_software() {
     _append /etc/environment-modules/modulespath /opt/modules
     _append /etc/bash.bashrc ". /etc/profile.d/modules.sh"
     _install --collection=Auxiliary \
-        ack vim tcl aptitude snapd telegram-desktop
+        ack vim tcl aptitude snapd telegram-desktop colordiff
     _install --collection=Diagnostic \
-        htop pdsh clusterssh
+        htop pdsh clusterssh ganglia-monitor
     _append /etc/profile.d/pdsh.sh "export PDSH_RCMD_TYPE=ssh"
     _append /etc/profile.d/pdsh.sh "export WCOLL=$CONFIG/hosts"
     _append /etc/bash.bashrc ". /etc/profile.d/pdsh.sh"
+    _copy /etc/ganglia/gmond.conf
+    _restart ganglia-monitor
     _install --collection=Development \
         g++-8 gfortran-8 clang-8 clang-tools-8 valgrind git subversion cmake flex
     _install --collection=Multimedia \
@@ -137,13 +139,15 @@ if [[ -t 1 ]]; then
                 #shellcheck disable=SC2029
                 ssh "$host" "$(realpath "$0")"
             done
+        else
+            exit
         fi
     else
         _ask_user "configure $(hostname)" || exit
     fi
 fi
 
-_block "Configure $(hostname)"
+_block "Configure" "$(hostname)"
 if ! _is_server; then
     configure_ssh
     configure_ldap
