@@ -28,13 +28,22 @@ _block() { _line "$1 $2"; echo -e "=== $1 $GREEN$2$NC ==="; _line "$1 $2"; }
 _is_server() { systemctl is-active -q slapd; } # Checks if LDAP server is active
 
 _install() {
+    local status_cmd install_cmd
     declare -a packages not_installed
     for arg; do case $arg in
         --collection=*) local collection=${arg#*=};;
+        --snap) local snap=1;;
         *) packages+=("$arg");;
     esac; done
+    if [[ $snap ]]; then
+        status_cmd="snap list"
+        install_cmd="snap install --classic"
+    else
+        status_cmd="dpkg -s"
+        install_cmd="apt-get install -y"
+    fi
     for pkg in "${packages[@]}"; do
-        if dpkg -s "$pkg" > /dev/null 2>&1; then
+        if $status_cmd $pkg > /dev/null 2>&1; then
             if [[ -z "$collection" ]]; then
                 _log "Package $MAGENTA$pkg$WHITE is already installed"
             fi
@@ -43,8 +52,10 @@ _install() {
         fi
     done
     if [[ ${#not_installed} -gt 0 ]]; then
-        _log "Install $MAGENTA${not_installed[*]}$WHITE"
-        apt-get install -y "${not_installed[@]}"
+        for pkg in "${not_installed[@]}"; do
+            _log "Install $MAGENTA$pkg$WHITE"
+            $install_cmd "$pkg"
+        done
     elif [[ "$collection" ]]; then
         _log "Package collection $MAGENTA$collection$WHITE is already installed"
     fi
@@ -105,7 +116,7 @@ _restart() {
     local service=$1
     if [[ -d "/var/cache/$service" ]]; then
         _log "Remove cache of $CYAN$service$WHITE"
-        rm -rf /var/cache/$service/*
+        rm -rf "/var/cache/$service/"*
     fi
     _log "Restart daemon $CYAN$service$WHITE"
     systemctl restart "$service"

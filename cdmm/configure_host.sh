@@ -85,7 +85,7 @@ configure_local_home() {
     }
     [[ -d "$LOCAL_HOME" ]] || { _warn "Directory $LOCAL_HOME does not exists"; return; }
     root_device=$(get_device '/');
-    if [[ -d "/sys/block/"$root_device"" \
+    if [[ -d "/sys/block/$root_device" \
         && "$(cat /sys/block/"$root_device"/queue/rotational)" -eq 0 ]]; then
         _log "System is installed on the SSD drive"
         grep -v '^#' /etc/fstab | grep -q "$LOCAL_HOME" \
@@ -107,7 +107,9 @@ install_software() {
     _append /etc/environment-modules/modulespath /opt/modules
     _append /etc/bash.bashrc ". /etc/profile.d/modules.sh"
     _install --collection=Auxiliary \
-        ack vim tcl aptitude snapd telegram-desktop colordiff
+        ack vim tcl aptitude snapd colordiff
+    _install --collection="from Snap" \
+        --snap atom chromium slack telegram-desktop vlc
     _install --collection=Diagnostic \
         htop pdsh clusterssh ganglia-monitor
     _append /etc/profile.d/pdsh.sh "export PDSH_RCMD_TYPE=ssh"
@@ -118,7 +120,7 @@ install_software() {
     _install --collection=Development \
         g++-8 gfortran-8 clang-8 clang-tools-8 valgrind git subversion cmake flex
     _install --collection=Multimedia \
-        ffmpeg imagemagick smpeg-plaympeg graphviz vlc
+        ffmpeg imagemagick smpeg-plaympeg graphviz
     _install --collection=Visualization \
         gnuplot paraview
     _install --collection=Python3 \
