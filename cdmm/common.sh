@@ -74,10 +74,10 @@ _append() {
         grep -q "$short_header" "$file" || { echo >> "$file"; echo "$header" >> "$file"; }
     fi
     if ! grep -q "$line" "$file"; then
-        [[ "$_last_appended_file" != "$file" ]] && _log "Append to $BLUE$file$WHITE"
+        [[ "$_last_appended_file" == "$file" ]] || _log "Append to $BLUE$file$WHITE"
         echo -e "$line" >> "$file"
+        _last_appended_file="$file"
     fi
-    _last_appended_file="$file"
 }
 
 _purge() {

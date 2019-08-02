@@ -101,11 +101,23 @@ configure_local_home() {
     done
 }
 
+activate_opt_software() {
+    _topic "Setup already installed software"
+    _append /etc/bash.bashrc ". /opt/spack/share/spack/setup-env.sh"
+    _copy /usr/share/applications/Mathematica.desktop
+}
+
 install_software() {
     _topic "Install additional software"
-    _install environment-modules
-    _append /etc/environment-modules/modulespath /opt/modules
-    _append /etc/bash.bashrc ". /etc/profile.d/modules.sh"
+    # Use Lmod instead of Environment Modules
+    #_install environment-modules
+    #_append /etc/environment-modules/modulespath /opt/modules
+    #_append /etc/bash.bashrc ". /etc/profile.d/modules.sh"
+    _install lmod
+    # TODO(olegrog): this line fix the current Ubuntu 18.04 bug
+    ln -sf /usr/lib/x86_64-linux-gnu/lua/5.2/posix_c.so /usr/lib/x86_64-linux-gnu/lua/5.2/posix.so
+    _append /etc/lmod/modulespath /opt/modules
+    _append /etc/bash.bashrc ". /etc/profile.d/lmod.sh"
     _install --collection=Auxiliary \
         ack vim tcl aptitude snapd colordiff
     _install --collection="from Snap" \
@@ -129,7 +141,6 @@ install_software() {
         openmpi-common libopenmpi-dev
     _install --collection="for Basilisk" \
         darcs gifsicle pstoedit swig libpython-dev libglu1-mesa-dev libosmesa6-dev
-    _copy /usr/share/applications/Mathematica.desktop
 }
 
 if [[ -t 1 ]]; then
@@ -158,4 +169,5 @@ if ! _is_server; then
     configure_local_home
 fi
 install_software
+activate_opt_software
 _topic "All work has been successfully completed"
