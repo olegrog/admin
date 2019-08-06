@@ -26,6 +26,9 @@ _topic() { echo -e "===$YELLOW $* $NC"===; }
 _line() { printf '=%.0s' $(seq -7 ${#1}); printf '\n'; }
 _block() { _line "$1 $2"; echo -e "=== $1 $GREEN$2$NC ==="; _line "$1 $2"; }
 _is_server() { systemctl is-active -q slapd; } # Checks if LDAP server is active
+_get_home() { local user=$1; getent passwd "$user" | cut -d: -f6; }
+_get_hosts() { getent -s ldap hosts | awk '{ print $2 }'; }
+_check_if_file_exists() { [[ -f "$1" ]] || _err "File $BLUE$1$WHITE is absent"; }
 
 _install() {
     local status_cmd install_cmd
@@ -43,7 +46,7 @@ _install() {
         install_cmd="apt-get install -y"
     fi
     for pkg in "${packages[@]}"; do
-        if $status_cmd $pkg > /dev/null 2>&1; then
+        if $status_cmd "$pkg" > /dev/null 2>&1; then
             if [[ -z "$collection" ]]; then
                 _log "Package $MAGENTA$pkg$WHITE is already installed"
             fi
@@ -96,7 +99,7 @@ _purge() {
 _copy() {
     local file=$1
     local src="$CONFIG/$file"
-    [[ -f "$src" ]] || _err "File $src is absent"
+    _check_if_file_exists "$src"
     if [[ -f "$file" ]]; then
         colordiff "$file" "$src" || _log "File $BLUE$file$WHITE is replaced"
     else
@@ -107,7 +110,7 @@ _copy() {
 
 _ask_user() {
     local request=$1
-    read -p "Are you sure to $request (y/n)? " -n 1 -r
+    read -p "Are you sure to $request (y/N)? " -n 1 -r
     echo
     [[ $REPLY =~ ^[Yy]$ ]]
 }
@@ -120,4 +123,39 @@ _restart() {
     fi
     _log "Restart daemon $CYAN$service$WHITE"
     systemctl restart "$service"
+}
+
+_add_ssh_key() {
+    local user=$1
+    local keyfile=$2
+    _check_if_file_exists "$keyfile"
+    [[ $(wc -l < "$keyfile") -eq 1 ]] || _err "There is no single line in $BLUE$keyfile$RED"
+    local home; home=$(_get_home "$user")
+    local authorized_keys="$home/.ssh/authorized_keys"
+    touch "$authorized_keys"
+    if ! grep -q "$(cat "$keyfile")" "$authorized_keys"; then
+        _log "Add key from $BLUE$keyfile$WHITE to $BLUE$authorized_keys$WHITE"
+        cat "$keyfile" >> "$authorized_keys"
+    fi
+    chmod 600 "$authorized_keys"
+    chown "$user":"$(id -g "$user")" "$authorized_keys"
+}
+
+_update_ssh_known_hosts() {
+    local user=$1; shift
+    local hosts=("$@")
+    local home; home=$(_get_home "$user")
+    local known_hosts="$home/.ssh/known_hosts"
+    _log "Add $GREEN${hosts[*]}$WHITE to $BLUE$known_hosts$WHITE"
+    touch "$known_hosts"
+    for host in "${hosts[@]}"; do
+        # Iterate over both ip and hostname
+        for hostname in $(getent -s ldap hosts | grep "$host"); do
+            # Remove old fingerprints and add a new one
+            ssh-keygen -R "$hostname" -f "$known_hosts" > /dev/null 2>&1
+            ssh-keyscan -t ecdsa-sha2-nistp256 "$hostname" >> "$known_hosts"
+        done
+    done
+    rm -f "$known_hosts.old"
+    chown "$user":"$(id -g "$user")" "$known_hosts"
 }

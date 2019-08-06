@@ -10,6 +10,9 @@ EOF
     exit 1;
 }
 
+# shellcheck source=./common.sh
+source "$(dirname "$0")/common.sh"
+
 group=$GROUP
 
 for arg; do case $arg in
@@ -20,9 +23,6 @@ esac; done
 
 [[ ${#name[@]} -eq 2 ]] || { echo "Provide both first and last names."; print_help; }
 [[ $EUID -eq 0 ]] || { echo "Run with sudo."; exit 1; }
-
-# shellcheck source=./common.sh
-source "$(dirname "$0")/common.sh"
 
 read -r first_name last_name <<< "${name[@]}"
 # Make all letters lowercase
@@ -41,7 +41,7 @@ firstuid=$(getent -s ldap passwd | head -1 | awk -F: '{ print $3 }')
 check_host_reachability() {
     local err
     # Iterate over all hosts registered in LDAP, but not in /etc/hosts
-    for host in $(getent -s ldap hosts | awk '{ print $2 }'); do
+    for host in $(_get_hosts); do
         printf ' -- Check if %s is reachable...' "$host"
         # Check whether SSH port is open
         if nc -z -w 2 "$host" 22; then
@@ -55,6 +55,10 @@ check_host_reachability() {
 }
 
 register_user() {
+    if getent passwd | grep -q "$user"; then
+        _warn "User $YELLOW$user$RED already exists"
+        return
+    fi
     _topic "Register a new user"
     _log "Add an UNIX user"
     adduser_options=(
@@ -64,7 +68,7 @@ register_user() {
         --gecos "${first_name^} ${last_name^}"
     )
     adduser "${adduser_options[@]}" "$user"
-    home=$(getent passwd "$user" | cut -d: -f6)
+    local home; home=$(_get_home "$user")
     chmod o-r "$home"
     # We can set empty UNIX password, but only non-empty LDAP password
     password=$(pwgen -N1 -s)
@@ -76,7 +80,7 @@ register_user() {
     /usr/share/migrationtools/migrate_passwd.pl <(grep "$user" /etc/passwd) \
         | ldapadd -x -D "cn=admin,$LDAP_BASE" -y /etc/ldap.secret
     userdel -f "$user"
-    for host in $(getent -s ldap hosts | awk '{ print $2 }'); do
+    for host in $(_get_hosts); do
         [[ "$(hostname)" == "$host" ]] && continue
         _log "Restart AutoFS on $host"
         ssh "$host" systemctl restart autofs
@@ -85,31 +89,28 @@ register_user() {
 
 configure_ssh_directory() {
     _topic "Configure SSH"
-    _log "Provide passwordless SSH connection"
-    su "$user" << EOF
-        cat /dev/zero | ssh-keygen -t rsa -P ""
-        cat "$pubkey" > ~/.ssh/authorized_keys
-        cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys
-        chmod 600 ~/.ssh/authorized_keys
-        touch ~/.ssh/known_hosts
-EOF
-    _log "Save fingerprints of all hosts"
-    for hostname in $(getent -s ldap hosts); do
-        # Iterate over both ip and hostname
-        ssh-keyscan -t ecdsa-sha2-nistp256 "$hostname" >> "$home/.ssh/known_hosts"
-    done
+    local home; home=$(_get_home "$user")
+    mapfile -t hosts < <(_get_hosts)
+    if [[ ! -f $home/.ssh/id_rsa.pub ]]; then
+        _log "Generate a local RSA key"
+        su "$user" -c 'ssh-keygen -t rsa -P "" < /dev/zero'
+    fi
+    _add_ssh_key "$user" "$pubkey"
+    _add_ssh_key "$user" "$(_get_home "$user")"/.ssh/id_rsa.pub
+    _update_ssh_known_hosts "$user" "${hosts[@]}"
 }
 
 generate_additional_files() {
     _topic "Additional files"
-    if [[ -f $face ]]; then
-        _log "Add avatar"
+    local home; home=$(_get_home "$user")
+    if [[ -f $face ]] && [[ ! -f "$home/.face" ]]; then
+        _log "Upload the avatar"
         cp "$face" "$home/.face"
         chown "$user:$group" "$home/.face"
     fi
 }
 
-if _ask_user "add $first_name $last_name as user $user"; then
+if _ask_user "add ${first_name^} ${last_name^} as user $user"; then
     check_host_reachability # we need it to capture fingerprint of all SSH servers
     register_user
     configure_ssh_directory
