@@ -29,18 +29,8 @@ add_ldap_record() {
 
 update_ssh_known_hosts() {
     _topic "Register fingerprint of the SSH server"
-    local home known_hosts
     for user in root $(getent -s ldap passwd | awk -F: '{ print $1 }'); do
-        home=$(getent passwd "$user" | cut -d: -f6)
-        known_hosts=$home/.ssh/known_hosts
-        _log "Fill in $known_hosts"
-        for hostname in $host $ip; do
-            # Remove old fingerprints and add a new one
-            ssh-keygen -R "$hostname" -f "$known_hosts" > /dev/null 2>&1
-            ssh-keyscan -t ecdsa-sha2-nistp256 "$hostname" >> "$known_hosts"
-        done
-        rm -f "$known_hosts.old"
-        chown "$user":"$(id -g "$user")" "$known_hosts"
+        _update_ssh_known_hosts "$user" "$host"
     done
 }
 

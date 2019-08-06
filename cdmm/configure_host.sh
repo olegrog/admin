@@ -37,8 +37,15 @@ EOF
         # Update PAM automatically to ensure correctness of /etc/pam.d/* files
         DEBIAN_FRONTEND=noninteractive pam-auth-update
     fi
-    [[ -z $(getent -s ldap hosts) ]] && _err "LDAP databases are not included in NSS lookups"
+    [[ -z "$(getent -s ldap hosts)" ]] && _err "LDAP databases are not included in NSS lookups"
     _restart nscd
+}
+
+add_dummy_user() {
+    if [[ $(awk -F: '$3 >= 1000' /etc/passwd | wc -l) -eq 1 ]]; then
+        _log "Add a dummy UNIX user $(hostname)"
+        useradd -M "$(hostname)"
+    fi
 }
 
 configure_nfs() {
@@ -72,7 +79,7 @@ configure_admins() {
     fi
     mkdir -p /root/.ssh
     chmod 700 /root/.ssh
-    admin_key=$(cat /home/$ADMIN/.ssh/id_rsa.pub)
+    admin_key=$(cat "$(_get_home $ADMIN)/.ssh/id_rsa.pub")
     _append /root/.ssh/authorized_keys "$admin_key"
     chmod 600 /root/.ssh/authorized_keys
 }
@@ -121,7 +128,7 @@ install_software() {
     _install --collection=Auxiliary \
         ack vim tcl aptitude snapd colordiff
     _install --collection="from Snap" \
-        --snap atom chromium slack telegram-desktop vlc
+        --snap atom chromium slack telegram-desktop vlc shellcheck
     _install --collection=Diagnostic \
         htop pdsh clusterssh ganglia-monitor
     _append /etc/profile.d/pdsh.sh "export PDSH_RCMD_TYPE=ssh"
@@ -136,7 +143,7 @@ install_software() {
     _install --collection=Visualization \
         gnuplot paraview
     _install --collection=Python3 \
-        python3-pip python3-numpy python3-scipy python3-sympy python3-matplotlib
+        python3-pip python3-numpy python3-scipy python3-sympy python3-matplotlib pylint3
     _install --collection=MPI \
         openmpi-common libopenmpi-dev
     _install --collection="for Basilisk" \
@@ -147,7 +154,7 @@ if [[ -t 1 ]]; then
     # We are in the interactive mode
     if _is_server; then
         if _ask_user "reconfigure all hosts"; then
-            for host in $(getent -s ldap hosts | awk '{ print $2 }'); do
+            for host in $(_get_hosts); do
                 [[ "$(hostname)" == "$host" ]] && continue
                 #shellcheck disable=SC2029
                 ssh "$host" "$(realpath "$0")"
@@ -164,6 +171,7 @@ _block "Configure" "$(hostname)"
 if ! _is_server; then
     configure_ssh
     configure_ldap
+    add_dummy_user
     configure_nfs
     configure_admins
     configure_local_home
