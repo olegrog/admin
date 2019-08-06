@@ -39,14 +39,13 @@ EOF
     fi
     [[ -z "$(getent -s ldap hosts)" ]] && _err "LDAP databases are not included in NSS lookups"
     _restart nscd
-}
-
-add_dummy_user() {
     if [[ $(awk -F: '$3 >= 1000' /etc/passwd | wc -l) -eq 1 ]]; then
-        _log "Add a dummy UNIX user $(hostname)"
+        # To prevent gnome-initial-setup after reboot
+        _log "Add a dummy UNIX user $GREEN$(hostname)$WHITE"
         useradd -M "$(hostname)"
     fi
 }
+
 
 configure_nfs() {
     _topic "Configure NFS and autofs"
@@ -171,7 +170,6 @@ _block "Configure" "$(hostname)"
 if ! _is_server; then
     configure_ssh
     configure_ldap
-    add_dummy_user
     configure_nfs
     configure_admins
     configure_local_home
