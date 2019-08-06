@@ -2,7 +2,7 @@
 
 # Colors
 declare -xr RED='\033[1;31m'        # for errors
-declare -xr GREEN='\033[1;32m'      # for host names
+declare -xr GREEN='\033[1;32m'      # for user/host names
 declare -xr YELLOW='\033[1;33m'     # for highlighing
 declare -xr BLUE='\033[1;34m'       # for file names
 declare -xr MAGENTA='\033[1;35m'    # for package names
