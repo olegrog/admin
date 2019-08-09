@@ -144,9 +144,11 @@ install_software() {
     _install --collection=Python3 \
         python3-pip python3-numpy python3-scipy python3-sympy python3-matplotlib pylint3
     _install --collection=MPI \
-        openmpi-common libopenmpi-dev
+        openmpi-common openmpi-bin libopenmpi-dev
     _install --collection="for Basilisk" \
         darcs gifsicle pstoedit swig libpython-dev libglu1-mesa-dev libosmesa6-dev
+    _install --collection="for OpenFOAM" \
+        build-essential zlib1g-dev libreadline-dev libncurses5-dev libgmp-dev libmpfr-dev libmpc-dev
 }
 
 if [[ -t 1 ]]; then
