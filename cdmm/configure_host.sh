@@ -56,7 +56,7 @@ configure_nfs() {
         _append "/etc/auto.$dir" "$(printf '%-4s%s\n' "*" "$SERVER:/$dir/&")"
     done
     if [[ $(find /home -maxdepth 1 | wc -l) -gt 1 ]]; then
-        if ! mount | grep -q "on /home "; then
+        if ! mount | grep -Fq "on /home "; then
             _log "Move /home/* to /home_/"
             mkdir -p /home_
             mv /home/* /home_
@@ -65,7 +65,7 @@ configure_nfs() {
     systemctl reload autofs
     for dir in "${nfs_mounts[@]}"; do
         _log "Wait until /$dir is mounted"
-        until mount | grep -q "/etc/auto.$dir"; do sleep 0.1; done
+        until mount | grep -Fq "/etc/auto.$dir"; do sleep 0.1; done
     done
 }
 
@@ -94,7 +94,7 @@ configure_local_home() {
     if [[ -d "/sys/block/$root_device" \
         && "$(cat /sys/block/"$root_device"/queue/rotational)" -eq 0 ]]; then
         _log "System is installed on the SSD drive"
-        grep -v '^#' /etc/fstab | grep -q "$LOCAL_HOME" \
+        grep -v '^#' /etc/fstab | grep -Fq "$LOCAL_HOME" \
             || _err "There is no $LOCAL_HOME in /etc/fstab"
     fi
     for user in $(getent -s ldap passwd | awk -F: '{ print $1 }'); do
@@ -107,12 +107,6 @@ configure_local_home() {
     done
 }
 
-activate_opt_software() {
-    _topic "Setup already installed software"
-    _append /etc/bash.bashrc ". /opt/spack/share/spack/setup-env.sh"
-    _copy /usr/share/applications/Mathematica.desktop
-}
-
 install_software() {
     _topic "Install additional software"
     # Use Lmod instead of Environment Modules
@@ -120,7 +114,7 @@ install_software() {
     #_append /etc/environment-modules/modulespath /opt/modules
     #_append /etc/bash.bashrc ". /etc/profile.d/modules.sh"
     _install lmod
-    # TODO(olegrog): this line fix the current Ubuntu 18.04 bug
+    # TODO(olegrog): the following line fixes the current Ubuntu 18.04 bug
     ln -sf /usr/lib/x86_64-linux-gnu/lua/5.2/posix_c.so /usr/lib/x86_64-linux-gnu/lua/5.2/posix.so
     _append /etc/lmod/modulespath /opt/modules
     _append /etc/bash.bashrc ". /etc/profile.d/lmod.sh"
@@ -143,12 +137,33 @@ install_software() {
         gnuplot paraview
     _install --collection=Python3 \
         python3-pip python3-numpy python3-scipy python3-sympy python3-matplotlib pylint3
+    [[ $_installed_now ]] && pip3 install --upgrade pip numpy scipy sympy matplotlib pylint
     _install --collection=MPI \
         openmpi-common openmpi-bin libopenmpi-dev
     _install --collection="for Basilisk" \
         darcs gifsicle pstoedit swig libpython-dev libglu1-mesa-dev libosmesa6-dev
     _install --collection="for OpenFOAM" \
         build-essential zlib1g-dev libreadline-dev libncurses5-dev libgmp-dev libmpfr-dev libmpc-dev
+}
+
+# For software installed to /opt from deb packages
+install_proprietary_software() {
+    _install --use-opt --deb-from-distrib \
+        "teamviewer_*_amd64.deb"
+    _append /etc/apt/sources.list.d/google-chrome.list \
+        "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main"
+    if [[ "$_appended" ]]; then
+        wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
+        apt-get update
+    fi
+    _install --use-opt \
+        google-chrome-stable
+}
+
+activate_opt_software() {
+    _topic "Setup already installed software"
+    _append /etc/bash.bashrc ". /opt/spack/share/spack/setup-env.sh"
+    _copy /usr/share/applications/Mathematica.desktop
 }
 
 if [[ -t 1 ]]; then
@@ -177,5 +192,6 @@ if ! _is_server; then
     configure_local_home
 fi
 install_software
+install_proprietary_software
 activate_opt_software
 _topic "All work has been successfully completed"
