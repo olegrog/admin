@@ -16,6 +16,7 @@ declare -xr LDAP_BASE="dc=cdmm,dc=skoltech,dc=ru"
 declare -xr ADMIN=o.rogozin
 declare -xr GROUP=cdmm
 declare -xr CONFIG=/opt/_config
+declare -xr DISTRIB=/opt/_distrib
 declare -xr LOCAL_HOME=/home-local
 
 _log() { echo -e "--$WHITE $*.$NC"; }
@@ -31,24 +32,34 @@ _get_hosts() { getent -s ldap hosts | awk '{ print $2 }'; }
 _check_if_file_exists() { [[ -f "$1" ]] || _err "File $BLUE$1$WHITE is absent"; }
 
 _install() {
+    unset _installed_now
     local status_cmd install_cmd
     declare -a packages not_installed
     for arg; do case $arg in
         --collection=*) local collection=${arg#*=};;
+        --use-opt) local use_opt=1;;
+        --deb-from-distrib) local deb_from_distrib=1;;
         --snap) local snap=1;;
         *) packages+=("$arg");;
     esac; done
     if [[ $snap ]]; then
-        status_cmd="snap list"
-        install_cmd="snap install --classic"
+        status_cmd() { snap list "$1"; }
+        install_cmd() { snap install --classic "$1"; }
     else
-        status_cmd="dpkg -s"
-        install_cmd="apt-get install -y"
+        status_cmd() { dpkg -s "$1" | grep -Eq 'Status.*installed'; }
+        install_cmd() { apt-get install -y $1; }
     fi
     for pkg in "${packages[@]}"; do
-        if $status_cmd "$pkg" > /dev/null 2>&1; then
+        local pkg_name="$pkg"
+        if [[ $deb_from_distrib ]]; then
+            pattern="$pkg"
+            pkg=$(find "$DISTRIB" -name "$pattern" | tail -1)
+            [[ "$pkg" ]] || _err "Package $DISTRIB/$pattern is not found"
+            pkg_name=$(dpkg-deb --field "$pkg" Package)
+        fi
+        if status_cmd "$pkg_name" > /dev/null 2>&1; then
             if [[ -z "$collection" ]]; then
-                _log "Package $MAGENTA$pkg$WHITE is already installed"
+                _log "Package $MAGENTA$pkg_name$WHITE is already installed"
             fi
         else
             not_installed+=("$pkg")
@@ -57,30 +68,50 @@ _install() {
     if [[ ${#not_installed} -gt 0 ]]; then
         for pkg in "${not_installed[@]}"; do
             _log "Install $MAGENTA$pkg$WHITE"
-            $install_cmd "$pkg"
+            if [[ $use_opt ]]; then
+                if [[ $deb_from_distrib ]]; then
+                    mkdir -p "/mnt/$(dirname "$pkg")"
+                    cp "$pkg" "/mnt/$(dirname "$pkg")"
+                fi
+                _log "Mount temporary $BLUE/mnt/opt$WHITE to $BLUE/opt$WHITE"
+                mount --bind /mnt/opt /opt
+            fi
+            if install_cmd "$pkg"; then
+                if [[ $use_opt ]]; then
+                    local daemon="$pkg_name"d
+                    systemctl is-active -q $daemon && systemctl stop "$daemon"
+                    umount /opt
+                    systemctl list-unit-files | grep -q "$daemon" && systemctl start "$daemon"
+                fi
+            else
+                [[ $use_opt ]] && { umount /opt; _failed; }
+            fi
         done
+        _installed_now=1 # Use this flag to check if packages have been installed right now
     elif [[ "$collection" ]]; then
         _log "Package collection $MAGENTA$collection$WHITE is already installed"
     fi
 }
 
 _append() {
+    unset _appended
     declare -r short_header="# CDMM cluster"
     local header
     local file=$1
     local line=$2
     [[ -z "$line" ]] && _err "An empty string is provided"
+    grep -Fq "$line" "$file" && return
     # Write a header for all amendments to config files
     if [[ $(cut -d "/" -f2 <<< "$file") == etc ]]; then
         header="$short_header: $(printf '%(%Y-%m-%d)T\n' -1)"
         [[ -f "$file" ]] || echo "$header" > "$file"
-        grep -q "$short_header" "$file" || { echo >> "$file"; echo "$header" >> "$file"; }
+        grep -Fq "$short_header" "$file" || { echo >> "$file"; echo "$header" >> "$file"; }
     fi
-    if ! grep -q "$line" "$file"; then
-        [[ "$_last_appended_file" == "$file" ]] || _log "Append to $BLUE$file$WHITE"
-        echo -e "$line" >> "$file"
-        _last_appended_file="$file"
-    fi
+    [[ "$_last_appended_file" == "$file" ]] || _log "Append to $BLUE$file$WHITE"
+    echo -e "$line" >> "$file"
+    # Set some global variables
+    _last_appended_file="$file"
+    _appended=1 # Use this flag to check if file was changed
 }
 
 _purge() {
@@ -133,7 +164,7 @@ _add_ssh_key() {
     local home; home=$(_get_home "$user")
     local authorized_keys="$home/.ssh/authorized_keys"
     touch "$authorized_keys"
-    if ! grep -q "$(cat "$keyfile")" "$authorized_keys"; then
+    if ! grep -Fq "$(cat "$keyfile")" "$authorized_keys"; then
         _log "Add key from $BLUE$keyfile$WHITE to $BLUE$authorized_keys$WHITE"
         cat "$keyfile" >> "$authorized_keys"
     fi
