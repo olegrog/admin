@@ -119,9 +119,9 @@ install_software() {
     _append /etc/lmod/modulespath /opt/modules
     _append /etc/bash.bashrc ". /etc/profile.d/lmod.sh"
     _install --collection=Auxiliary \
-        ack vim tcl aptitude snapd colordiff
-    _install --collection="from Snap" \
-        --snap atom chromium slack telegram-desktop vlc shellcheck
+        ack vim tcl aptitude snapd colordiff gconf-service
+    _install --collection="from Snap" --snap \
+        atom chromium slack telegram-desktop vlc shellcheck
     _install --collection=Diagnostic \
         htop pdsh clusterssh ganglia-monitor
     _append /etc/profile.d/pdsh.sh "export PDSH_RCMD_TYPE=ssh"
@@ -164,6 +164,7 @@ activate_opt_software() {
     _topic "Setup already installed software"
     _append /etc/bash.bashrc ". /opt/spack/share/spack/setup-env.sh"
     _copy /usr/share/applications/Mathematica.desktop
+    _copy /usr/share/applications/Trello.desktop
 }
 
 if [[ -t 1 ]]; then
