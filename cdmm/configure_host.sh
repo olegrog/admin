@@ -119,7 +119,9 @@ install_software() {
     _append /etc/lmod/modulespath /opt/modules
     _append /etc/bash.bashrc ". /etc/profile.d/lmod.sh"
     _install --collection=Auxiliary \
-        ack vim tcl aptitude snapd colordiff gconf-service
+        ack vim tcl colordiff
+    _install --collection=Repository \
+        aptitude gconf-service software-properties-common snapd
     _install --collection="from Snap" --snap \
         atom chromium slack telegram-desktop vlc shellcheck
     _install --collection=Diagnostic \
@@ -148,8 +150,9 @@ install_software() {
 
 # For software installed to /opt from deb packages
 install_proprietary_software() {
-    _install --use-opt --deb-from-distrib \
-        "teamviewer_*_amd64.deb"
+    #_install --use-opt --deb-from-distrib "teamviewer_*_amd64.deb"
+    _append /etc/apt/sources.list.d/teamviewer.list \
+        "deb http://linux.teamviewer.com/deb stable main"
     _append /etc/apt/sources.list.d/google-chrome.list \
         "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main"
     if [[ "$_appended" ]]; then
@@ -157,7 +160,7 @@ install_proprietary_software() {
         apt-get update
     fi
     _install --use-opt \
-        google-chrome-stable
+        google-chrome-stable teamviewer
 }
 
 activate_opt_software() {
