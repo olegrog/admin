@@ -119,7 +119,7 @@ install_software() {
     _append /etc/lmod/modulespath /opt/modules
     _append /etc/bash.bashrc ". /etc/profile.d/lmod.sh"
     _install --collection=Auxiliary \
-        ack vim tcl colordiff
+        ack vim tcl colordiff kdiff3
     _install --collection=Repository \
         aptitude gconf-service software-properties-common snapd
     _install --collection="from Snap" --snap \
@@ -131,21 +131,28 @@ install_software() {
     _append /etc/bash.bashrc ". /etc/profile.d/pdsh.sh"
     _copy /etc/ganglia/gmond.conf
     _restart ganglia-monitor
+    _install --collection=Compilers \
+        g++-8 gfortran-8 clang-8 clang-tools-8
     _install --collection=Development \
-        g++-8 gfortran-8 clang-8 clang-tools-8 valgrind git subversion cmake flex
+        valgrind git subversion cmake flex build-essential doxygen
     _install --collection=Multimedia \
         ffmpeg imagemagick smpeg-plaympeg graphviz
     _install --collection=Visualization \
         gnuplot paraview
+    _install --collection="C++ Libraries" \
+        libboost-all-dev libblas-dev liblapack-dev zlib1g-dev trilinos-all-dev
     _install --collection=Python3 \
-        python3-pip python3-numpy python3-scipy python3-sympy python3-matplotlib pylint3
+        python3-pip python3-numpy python3-scipy python3-sympy python3-matplotlib pylint3 \
+        python3-mpi4py
     [[ $_installed_now ]] && pip3 install --upgrade pip numpy scipy sympy matplotlib pylint
     _install --collection=MPI \
         openmpi-common openmpi-bin libopenmpi-dev
     _install --collection="for Basilisk" \
         darcs gifsicle pstoedit swig libpython-dev libglu1-mesa-dev libosmesa6-dev
     _install --collection="for OpenFOAM" \
-        build-essential zlib1g-dev libreadline-dev libncurses5-dev libgmp-dev libmpfr-dev libmpc-dev
+        libreadline-dev libncurses5-dev libgmp-dev libmpfr-dev libmpc-dev
+    _install --collection="for Firedrake" \
+        mercurial bison python3-tk python3-venv liboce-ocaf-dev swig
 }
 
 # For software installed to /opt from deb packages
