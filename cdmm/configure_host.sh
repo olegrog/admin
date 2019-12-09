@@ -125,7 +125,7 @@ install_software() {
     _install --collection="from Snap" --snap \
         atom chromium slack telegram-desktop vlc shellcheck
     _install --collection=Diagnostic \
-        htop pdsh clusterssh ganglia-monitor
+        htop pdsh clusterssh ganglia-monitor xrdp
     _append /etc/profile.d/pdsh.sh "export PDSH_RCMD_TYPE=ssh"
     _append /etc/profile.d/pdsh.sh "export WCOLL=$CONFIG/hosts"
     _append /etc/bash.bashrc ". /etc/profile.d/pdsh.sh"
@@ -162,12 +162,20 @@ install_proprietary_software() {
         "deb http://linux.teamviewer.com/deb stable main"
     _append /etc/apt/sources.list.d/google-chrome.list \
         "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main"
-    if [[ "$_appended" ]]; then
+    if [[ $_appended ]]; then
         wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
         apt-get update
     fi
     _install --use-opt \
         google-chrome-stable teamviewer
+    if ! _is_server; then
+        # Configure systemd to run teamviewerd after NFS
+        _append /etc/systemd/system/teamviewerd.service.d/override.conf \
+            "[Unit]" \
+            "After=network.target network-online.target autofs.service" \
+            "RequiresMountsFor=/opt/teamviewer"
+        systemctl daemon-reload # need to run after changes in /etc/systemd
+    fi
 }
 
 activate_opt_software() {
@@ -195,6 +203,7 @@ if [[ -t 1 ]]; then
 fi
 
 _block "Configure" "$(hostname)"
+_check_if_dir_exists "$CONFIG"
 if ! _is_server; then
     configure_ssh
     configure_ldap

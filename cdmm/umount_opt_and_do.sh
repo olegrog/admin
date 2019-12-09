@@ -8,4 +8,4 @@ source "$(dirname "$0")/common.sh"
 
 mount --bind /mnt/opt /opt
 eval "$@" || _failed
-umount /opt
+umount -l /opt
