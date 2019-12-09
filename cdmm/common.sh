@@ -13,6 +13,7 @@ declare -xr NC='\033[0m'
 # Constants
 declare -xr SERVER=10.16.74.203
 declare -xr LDAP_BASE="dc=cdmm,dc=skoltech,dc=ru"
+declare -xr HEADER="# CDMM cluster"
 declare -xr ADMIN=o.rogozin
 declare -xr GROUP=cdmm
 declare -xr CONFIG=/opt/_config
@@ -30,10 +31,10 @@ _is_server() { systemctl is-active -q slapd; } # Checks if LDAP server is active
 _get_home() { local user=$1; getent passwd "$user" | cut -d: -f6; }
 _get_hosts() { getent -s ldap hosts | awk '{ print $2 }'; }
 _check_if_file_exists() { [[ -f "$1" ]] || _err "File $BLUE$1$WHITE is absent"; }
+_check_if_dir_exists() { [[ -d "$1" ]] || _err "Directory $BLUE$1$WHITE is absent"; }
 
 _install() {
     unset _installed_now
-    local status_cmd install_cmd
     declare -a packages not_installed
     for arg; do case $arg in
         --collection=*) local collection=${arg#*=};;
@@ -47,7 +48,7 @@ _install() {
         install_cmd() { snap install --classic "$1"; }
     else
         status_cmd() { dpkg -s "$1" | grep -Eq 'Status.*installed'; }
-        install_cmd() { apt-get install -y $1; }
+        install_cmd() { apt-get install -y "$1"; }
     fi
     for pkg in "${packages[@]}"; do
         local pkg_name="$pkg"
@@ -73,21 +74,22 @@ _install() {
                     mkdir -p "/mnt/$(dirname "$pkg")"
                     cp "$pkg" "/mnt/$(dirname "$pkg")"
                 fi
-                _log "Mount temporary $BLUE/mnt/opt$WHITE to $BLUE/opt$WHITE"
+                _log "Temporary mount $BLUE/mnt/opt$WHITE to $BLUE/opt$WHITE"
                 mount --bind /mnt/opt /opt
             fi
             if install_cmd "$pkg"; then
                 if [[ $use_opt ]]; then
                     local daemon="$pkg_name"d
-                    systemctl is-active -q $daemon && systemctl stop "$daemon"
-                    umount /opt
+                    systemctl is-active -q "$daemon" && systemctl stop "$daemon"
+                    umount -l /opt
+                    _log "Directory $BLUE/mnt/opt$WHITE is umounted"
                     systemctl list-unit-files | grep -q "$daemon" && systemctl start "$daemon"
                 fi
             else
-                [[ $use_opt ]] && { umount /opt; _failed; }
+                [[ $use_opt ]] && { umount -l /opt; _err "Failed to install $pkg"; }
             fi
         done
-        _installed_now=1 # Use this flag to check if packages have been installed right now
+        declare -x _installed_now=1 # indicates if packages have been installed right now
     elif [[ "$collection" ]]; then
         _log "Package collection $MAGENTA$collection$WHITE is already installed"
     fi
@@ -95,23 +97,26 @@ _install() {
 
 _append() {
     unset _appended
-    declare -r short_header="# CDMM cluster"
     local header
     local file=$1
-    local line=$2
-    [[ -z "$line" ]] && _err "An empty string is provided"
-    grep -Fq "$line" "$file" && return
+    shift
+    mkdir -p "$(dirname "$file")"
     # Write a header for all amendments to config files
     if [[ $(cut -d "/" -f2 <<< "$file") == etc ]]; then
-        header="$short_header: $(printf '%(%Y-%m-%d)T\n' -1)"
+        header="$HEADER: $(printf '%(%Y-%m-%d)T\n' -1)"
         [[ -f "$file" ]] || echo "$header" > "$file"
-        grep -Fq "$short_header" "$file" || { echo >> "$file"; echo "$header" >> "$file"; }
+        grep -Fq "$HEADER" "$file" || { echo >> "$file"; echo "$header" >> "$file"; }
     fi
+    # Append lines one by one
+    for line in "$@"; do
+        [[ -z "$line" ]] && _err "An empty string is provided"
+        grep -Fq "$line" "$file" && continue
+        echo -e "$line" >> "$file"
+        declare -x _appended=1 # use this global flag to check if file was changed
+    done
+    [[ $_appended ]] || return 0
     [[ "$_last_appended_file" == "$file" ]] || _log "Append to $BLUE$file$WHITE"
-    echo -e "$line" >> "$file"
-    # Set some global variables
-    _last_appended_file="$file"
-    _appended=1 # Use this flag to check if file was changed
+    _last_appended_file="$file" # global variable
 }
 
 _purge() {
