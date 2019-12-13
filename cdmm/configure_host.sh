@@ -148,7 +148,7 @@ install_software() {
     _install --collection=MPI \
         openmpi-common openmpi-bin libopenmpi-dev
     _install --collection="for Basilisk" \
-        darcs gifsicle pstoedit swig libpython-dev libglu1-mesa-dev libosmesa6-dev
+        darcs gifsicle pstoedit swig libpython-dev libosmesa6-dev libglew-dev
     _install --collection="for OpenFOAM" \
         libreadline-dev libncurses5-dev libgmp-dev libmpfr-dev libmpc-dev
     _install --collection="for Firedrake" \
