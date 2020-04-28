@@ -43,6 +43,7 @@ _install() {
         --snap) local snap=1;;
         *) packages+=("$arg");;
     esac; done
+    _is_server && unset use_opt
     if [[ $snap ]]; then
         status_cmd() { snap list "$1"; }
         install_cmd() { snap install --classic "$1"; }
