@@ -179,7 +179,7 @@ install_proprietary_software() {
 }
 
 activate_opt_software() {
-    _topic "Setup already installed software"
+    _topic "Setup the installed software"
     _append /etc/bash.bashrc ". /opt/spack/share/spack/setup-env.sh"
     _copy /usr/share/applications/Mathematica.desktop
     _copy /usr/share/applications/Trello.desktop
@@ -195,7 +195,7 @@ if [[ -t 1 ]]; then
                 ssh "$host" "$(realpath "$0")"
             done
         else
-            exit
+            _ask_user "configure $(hostname)" || exit
         fi
     else
         _ask_user "configure $(hostname)" || exit
