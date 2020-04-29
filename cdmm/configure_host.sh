@@ -1,7 +1,7 @@
 #!/bin/bash -e
 
 [[ $# -eq 0 ]] || { echo "Usage: ./$(basename "$0")"; exit 1; }
-[[ $EUID -eq 0 ]] || { echo "Run with sudo."; exit 1; }
+[[ "$HOME" == /root ]] || { echo "Run with sudo -H."; exit 1; }
 
 # shellcheck source=./common.sh
 source "$(dirname "$0")/common.sh"
@@ -48,7 +48,6 @@ EOF
         useradd -M "$(hostname)"
     fi
 }
-
 
 configure_nfs() {
     _topic "Configure NFS and autofs"
@@ -110,6 +109,33 @@ configure_local_home() {
     done
 }
 
+# This configuration does not work since snapd rewrite /var/lib/snapd/state.json
+configure_snapd() {
+    local new=/opt/snapd
+    local old=/var/lib/snapd
+    _append /etc/fstab "$new /var/lib/snapd none bind 0 0"
+    if [[ -d "$new" ]] && mount | grep -Fq " $old "; then
+        return
+    else
+        _log "Configure ${CYAN}snapd$WHITE"
+        systemctl disable --now snapd.socket
+        systemctl stop snapd
+        if _is_server; then
+            if [[ ! -d "$new" ]]; then
+                _log "Move $BLUE$old$WHITE to $BLUE$new$WHITE"
+                mv "$old" "$new"
+                mkdir "$old"
+            fi
+        else
+            # Suppress snap auto update on clients
+            snap set system refresh.metered=hold
+        fi
+        mount "$old"
+        systemctl enable --now snapd.socket
+        systemctl start snapd
+    fi
+}
+
 install_software() {
     _topic "Install additional software"
     # Use Lmod instead of Environment Modules
@@ -125,8 +151,9 @@ install_software() {
         ack vim tcl colordiff kdiff3
     _install --collection=Repository \
         aptitude gconf-service software-properties-common snapd
+    #configure_snapd
     _install --collection="from Snap" --snap \
-        atom chromium slack telegram-desktop vlc shellcheck
+        atom chromium slack telegram-desktop vlc shellcheck julia
     _install --collection="Remote desktop" \
         xrdp tigervnc-standalone-server xfce4-session
     _add_user_to_group xrdp ssl-cert
@@ -170,7 +197,7 @@ install_proprietary_software() {
     #_append /etc/apt/sources.list.d/google-chrome.list \
     #    "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main"
     #if [[ $_modified ]]; then
-    #    wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
+    #    wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add -
     #    apt-get update
     #fi
     _install --use-opt --deb-from-distrib google-chrome-stable_current_amd64.deb
