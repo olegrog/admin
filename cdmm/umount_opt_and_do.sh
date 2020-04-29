@@ -6,6 +6,8 @@
 # shellcheck source=./common.sh
 source "$(dirname "$0")/common.sh"
 
-mount --bind /mnt/opt /opt
-eval "$@" || _failed
-umount -l /opt
+_is_server || mount --bind /mnt/opt /opt
+eval "$@" || { _failed; code=1; }
+_is_server || umount -l /opt
+
+exit $code
