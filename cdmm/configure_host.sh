@@ -124,10 +124,10 @@ install_software() {
         aptitude gconf-service software-properties-common snapd
     _install --collection="from Snap" --snap \
         atom chromium slack telegram-desktop vlc shellcheck
+    _install --collection="Remote desktop" \
+        xrdp tigervnc-standalone-server xfce4-session
     _install --collection=Diagnostic \
-        htop pdsh clusterssh ganglia-monitor xrdp
-    # Configure xrdp
-    _add_user_to_group xrdp ssl-cert
+        htop pdsh clusterssh ganglia-monitor
     # Configure pdsh
     _append /etc/profile.d/pdsh.sh "export PDSH_RCMD_TYPE=ssh"
     _append /etc/profile.d/pdsh.sh "export WCOLL=$CONFIG/hosts"
