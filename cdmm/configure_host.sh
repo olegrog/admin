@@ -18,8 +18,9 @@ configure_ssh() {
 }
 
 configure_ldap() {
+    unset _is_modified
     _topic "Configure LDAP client for NSS"
-    _log "Set DebConf selections"
+    _log "Set ${CYAN}DebConf$WHITE selections"
     cat <<EOF | debconf-set-selections
 nslcd	        nslcd/ldap-base	string  $LDAP_BASE
 nslcd	        nslcd/ldap-uris	string	ldap://$SERVER
@@ -29,16 +30,18 @@ EOF
     if ! grep -q "hosts: *files ldap" /etc/nsswitch.conf; then
         _log "Set LDAP priority higher than DNS for host NSS"
         sed -i 's/^hosts:\( *\)files \(.*\) ldap$/hosts:\1files ldap \2/' /etc/nsswitch.conf
+        _is_modified=1
     fi
     if grep -q "use_authtok" /etc/pam.d/common-*; then
-        _log "Update PAM rules"
+        _log "Update ${CYAN}PAM$WHITE rules"
         # Prevent UNIX authentication when password is changing
         sed -i 's/use_authtok //g' /etc/pam.d/common-password
         # Update PAM automatically to ensure correctness of /etc/pam.d/* files
         DEBIAN_FRONTEND=noninteractive pam-auth-update
+        _is_modified=1
     fi
     [[ -z "$(getent -s ldap hosts)" ]] && _err "LDAP databases are not included in NSS lookups"
-    _restart_daemon nscd
+    [[ $_is_modified ]] && _restart_daemon nscd
     if [[ $(awk -F: '$3 >= 1000' /etc/passwd | wc -l) -eq 1 ]]; then
         # To prevent gnome-initial-setup after reboot
         _log "Add a dummy UNIX user $GREEN$(hostname)$WHITE"
@@ -57,14 +60,14 @@ configure_nfs() {
     done
     if [[ $(find /home -maxdepth 1 | wc -l) -gt 1 ]]; then
         if ! mount | grep -Fq "on /home "; then
-            _log "Move /home/* to /home_/"
+            _log "Move $BLUE/home/*$WHITE to $BLUE/home_/$WHITE"
             mkdir -p /home_
             mv /home/* /home_
         fi
     fi
     systemctl reload autofs
     for dir in "${nfs_mounts[@]}"; do
-        _log "Wait until /$dir is mounted"
+        _log "Wait until $BLUE/$dir$WHITE is mounted"
         until mount | grep -Fq "/etc/auto.$dir"; do sleep 0.1; done
     done
 }
@@ -73,7 +76,7 @@ configure_admins() {
     local admin_key
     _topic "Configure admin permissions"
     if ! groups $ADMIN | grep -q sudo; then
-        _log "Add $ADMIN to sudoers"
+        _log "Add $GREEN$ADMIN$WHITE to sudoers"
         usermod -a -G sudo "$ADMIN"
     fi
     mkdir -p /root/.ssh
@@ -89,18 +92,18 @@ configure_local_home() {
     get_device() {
         basename "$(mount | grep " $1 " | cut -f1 -d' ' | sed 's/[0-9]*//g')"
     }
-    [[ -d "$LOCAL_HOME" ]] || { _warn "Directory $LOCAL_HOME does not exists"; return; }
+    [[ -d "$LOCAL_HOME" ]] || { _warn "Directory $BLUE$LOCAL_HOME$WHITE does not exists"; return; }
     root_device=$(get_device '/');
     if [[ -d "/sys/block/$root_device" \
         && "$(cat /sys/block/"$root_device"/queue/rotational)" -eq 0 ]]; then
         _log "System is installed on the SSD drive"
         grep -v '^#' /etc/fstab | grep -Fq "$LOCAL_HOME" \
-            || _err "There is no $LOCAL_HOME in /etc/fstab"
+            || _err "There is no $BLUE$LOCAL_HOME$WHITE in $BLUE/etc/fstab$WHITE"
     fi
     for user in $(getent -s ldap passwd | awk -F: '{ print $1 }'); do
         [[ "$(id -gn "$user")" == "$GROUP" ]] || continue
         if ! [[ -d "$LOCAL_HOME/$user" ]]; then
-            _log "Create $LOCAL_HOME/$user"
+            _log "Create $BLUE$LOCAL_HOME/$user$WHITE"
             mkdir -p "$LOCAL_HOME/$user"
         fi
         chown "$user:$GROUP" "$LOCAL_HOME/$user"
@@ -126,6 +129,7 @@ install_software() {
         atom chromium slack telegram-desktop vlc shellcheck
     _install --collection="Remote desktop" \
         xrdp tigervnc-standalone-server xfce4-session
+    _add_user_to_group xrdp ssl-cert
     _install --collection=Diagnostic \
         htop pdsh clusterssh ganglia-monitor
     # Configure pdsh
@@ -134,7 +138,7 @@ install_software() {
     _append /etc/bash.bashrc ". /etc/profile.d/pdsh.sh"
     # Configure ganglia-monitor
     _copy /etc/ganglia/gmond.conf
-    _restart_daemon ganglia-monitor
+    [[ $_modified ]] && _restart_daemon ganglia-monitor
     _install --collection=Compilers \
         g++-8 gfortran-8 clang-8 clang-tools-8
     _install --collection=Development \
@@ -165,7 +169,7 @@ install_proprietary_software() {
     #_install --use-opt --deb-from-distrib "teamviewer_*_amd64.deb"
     #_append /etc/apt/sources.list.d/google-chrome.list \
     #    "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main"
-    #if [[ $_appended ]]; then
+    #if [[ $_modified ]]; then
     #    wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
     #    apt-get update
     #fi
