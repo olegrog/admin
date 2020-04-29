@@ -4,9 +4,9 @@
 declare -xr RED='\033[1;31m'        # for errors
 declare -xr GREEN='\033[1;32m'      # for user/host names
 declare -xr YELLOW='\033[1;33m'     # for highlighing
-declare -xr BLUE='\033[1;34m'       # for file/group names
+declare -xr BLUE='\033[1;34m'       # for file names
 declare -xr MAGENTA='\033[1;35m'    # for package names
-declare -xr CYAN='\033[1;36m'       # for daemon names
+declare -xr CYAN='\033[1;36m'       # for daemon/group names
 declare -xr WHITE='\033[1;97m'      # for logging
 declare -xr NC='\033[0m'
 
@@ -97,7 +97,7 @@ _install() {
 }
 
 _append() {
-    unset _appended
+    unset _modified
     local header
     local file=$1
     shift
@@ -113,11 +113,12 @@ _append() {
         [[ -z "$line" ]] && _err "An empty string is provided"
         grep -Fq "$line" "$file" && continue
         echo -e "$line" >> "$file"
-        declare -x _appended=1 # use this global flag to check if file was changed
+        #shellcheck disable=SC2034
+        _modified=1  # use this global flag to check if file was changed
     done
-    [[ $_appended ]] || return 0
+    [[ $_modified ]] || return 0
     [[ "$_last_appended_file" == "$file" ]] || _log "Append to $BLUE$file$WHITE"
-    _last_appended_file="$file" # global variable
+    _last_appended_file="$file"  # global variable
 }
 
 _purge() {
@@ -134,11 +135,17 @@ _purge() {
 }
 
 _copy() {
+    #shellcheck disable=SC2034
+    _modified=1  # use this global flag to check if file was changed
     local file=$1
     local src="$CONFIG/$file"
     _check_if_file_exists "$src"
     if [[ -f "$file" ]]; then
-        colordiff "$file" "$src" || _log "File $BLUE$file$WHITE is replaced"
+        if ! colordiff "$file" "$src"; then
+            _log "File $BLUE$file$WHITE is replaced"
+        else
+            unset _modified
+        fi
     else
         _log "File $BLUE$file$WHITE is copied"
     fi
@@ -201,7 +208,7 @@ _add_user_to_group() {
     local user=$1
     local group=$2
     if ! id -nG "$user" | grep -Fq "$group"; then
-        _log "Add user $CYAN$user$WHITE to group $BLUE$group$WHITE"
+        _log "Add user $CYAN$user$WHITE to group $CYAN$group$WHITE"
         adduser "$user" "$group"
     fi
 }
