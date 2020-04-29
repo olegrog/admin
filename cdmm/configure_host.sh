@@ -161,17 +161,18 @@ install_software() {
 
 # For software installed to /opt from deb packages
 install_proprietary_software() {
+    # Old way:
     #_install --use-opt --deb-from-distrib "teamviewer_*_amd64.deb"
+    #_append /etc/apt/sources.list.d/google-chrome.list \
+    #    "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main"
+    #if [[ $_appended ]]; then
+    #    wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
+    #    apt-get update
+    #fi
+    _install --use-opt --deb-from-distrib google-chrome-stable_current_amd64.deb
     _append /etc/apt/sources.list.d/teamviewer.list \
         "deb http://linux.teamviewer.com/deb stable main"
-    _append /etc/apt/sources.list.d/google-chrome.list \
-        "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main"
-    if [[ $_appended ]]; then
-        wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
-        apt-get update
-    fi
-    _install --use-opt \
-        google-chrome-stable teamviewer
+    _install --use-opt teamviewer
     if ! _is_server; then
         # Configure systemd to run teamviewerd after NFS
         _append /etc/systemd/system/teamviewerd.service.d/override.conf \
