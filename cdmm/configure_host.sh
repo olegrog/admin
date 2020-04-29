@@ -38,7 +38,7 @@ EOF
         DEBIAN_FRONTEND=noninteractive pam-auth-update
     fi
     [[ -z "$(getent -s ldap hosts)" ]] && _err "LDAP databases are not included in NSS lookups"
-    _restart nscd
+    _restart_daemon nscd
     if [[ $(awk -F: '$3 >= 1000' /etc/passwd | wc -l) -eq 1 ]]; then
         # To prevent gnome-initial-setup after reboot
         _log "Add a dummy UNIX user $GREEN$(hostname)$WHITE"
@@ -126,11 +126,15 @@ install_software() {
         atom chromium slack telegram-desktop vlc shellcheck
     _install --collection=Diagnostic \
         htop pdsh clusterssh ganglia-monitor xrdp
+    # Configure xrdp
+    _add_user_to_group xrdp ssl-cert
+    # Configure pdsh
     _append /etc/profile.d/pdsh.sh "export PDSH_RCMD_TYPE=ssh"
     _append /etc/profile.d/pdsh.sh "export WCOLL=$CONFIG/hosts"
     _append /etc/bash.bashrc ". /etc/profile.d/pdsh.sh"
+    # Configure ganglia-monitor
     _copy /etc/ganglia/gmond.conf
-    _restart ganglia-monitor
+    _restart_daemon ganglia-monitor
     _install --collection=Compilers \
         g++-8 gfortran-8 clang-8 clang-tools-8
     _install --collection=Development \
