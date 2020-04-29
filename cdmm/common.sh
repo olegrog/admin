@@ -4,7 +4,7 @@
 declare -xr RED='\033[1;31m'        # for errors
 declare -xr GREEN='\033[1;32m'      # for user/host names
 declare -xr YELLOW='\033[1;33m'     # for highlighing
-declare -xr BLUE='\033[1;34m'       # for file names
+declare -xr BLUE='\033[1;34m'       # for file/group names
 declare -xr MAGENTA='\033[1;35m'    # for package names
 declare -xr CYAN='\033[1;36m'       # for daemon names
 declare -xr WHITE='\033[1;97m'      # for logging
@@ -152,7 +152,7 @@ _ask_user() {
     [[ $REPLY =~ ^[Yy]$ ]]
 }
 
-_restart() {
+_restart_daemon() {
     local service=$1
     if [[ -d "/var/cache/$service" ]]; then
         _log "Remove cache of $CYAN$service$WHITE"
@@ -195,4 +195,13 @@ _update_ssh_known_hosts() {
     done
     rm -f "$known_hosts.old"
     chown "$user":"$(id -g "$user")" "$known_hosts"
+}
+
+_add_user_to_group() {
+    local user=$1
+    local group=$2
+    if ! id -nG "$user" | grep -Fq "$group"; then
+        _log "Add user $CYAN$user$WHITE to group $BLUE$group$WHITE"
+        adduser "$user" "$group"
+    fi
 }
