@@ -178,7 +178,7 @@ install_software() {
         libboost-all-dev libblas-dev liblapack-dev zlib1g-dev trilinos-all-dev
     _install --collection=Python3 \
         python3-pip python3-numpy python3-scipy python3-sympy python3-matplotlib pylint3 \
-        python3-mpi4py
+        python3-mpi4py python3-numba
     [[ $_installed_now ]] && pip3 install --upgrade pip numpy scipy sympy matplotlib pylint
     _install --collection=MPI \
         openmpi-common openmpi-bin libopenmpi-dev
