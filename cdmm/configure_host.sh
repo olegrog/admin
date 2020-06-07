@@ -40,7 +40,7 @@ EOF
         DEBIAN_FRONTEND=noninteractive pam-auth-update
         _is_modified=1
     fi
-    [[ -z "$(getent -s ldap hosts)" ]] && _err "LDAP databases are not included in NSS lookups"
+    [[ -z "$(_get_hosts)" ]] && _err "LDAP databases are not included in NSS lookups"
     [[ $_is_modified ]] && _restart_daemon nscd
     if [[ $(awk -F: '$3 >= 1000' /etc/passwd | wc -l) -eq 1 ]]; then
         # To prevent gnome-initial-setup after reboot
@@ -99,7 +99,7 @@ configure_local_home() {
         grep -v '^#' /etc/fstab | grep -Fq "$LOCAL_HOME" \
             || _err "There is no $BLUE$LOCAL_HOME$WHITE in $BLUE/etc/fstab$WHITE"
     fi
-    for user in $(getent -s ldap passwd | awk -F: '{ print $1 }'); do
+    for user in $(_get_users); do
         [[ "$(id -gn "$user")" == "$GROUP" ]] || continue
         if ! [[ -d "$LOCAL_HOME/$user" ]]; then
             _log "Create $BLUE$LOCAL_HOME/$user$WHITE"

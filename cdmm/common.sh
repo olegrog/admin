@@ -30,6 +30,7 @@ _block() { _line "$1 $2"; echo -e "=== $1 $GREEN$2$NC ==="; _line "$1 $2"; }
 _is_server() { systemctl is-active -q slapd; } # Checks if LDAP server is active
 _get_home() { local user=$1; getent passwd "$user" | cut -d: -f6; }
 _get_hosts() { getent -s ldap hosts | awk '{ print $2 }'; }
+_get_users() { getent -s ldap passwd | awk -F: '{ print $1 }'; }
 _check_if_file_exists() { [[ -f "$1" ]] || _err "File $BLUE$1$WHITE is absent"; }
 _check_if_dir_exists() { [[ -d "$1" ]] || _err "Directory $BLUE$1$WHITE is absent"; }
 
