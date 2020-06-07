@@ -115,4 +115,5 @@ if _ask_user "add ${first_name^} ${last_name^} as user $user"; then
     register_user
     configure_ssh_directory
     generate_additional_files
+    "$(dirname "$0")"/set_quota.sh -y --user="$user"
 fi

@@ -24,9 +24,12 @@ group="$GROUP"
 dir=/home
 
 for arg; do case $arg in
-    --soft=*)           soft="${arg#*=}";;
-    --hard=*)           hard="${arg#*=}";;
-    --group=*)          group="${arg#*=}";;
+    -s=*|--soft=*)      soft="${arg#*=}";;
+    -h=*|--hard=*)      hard="${arg#*=}";;
+    -g=*|--group=*)     group="${arg#*=}";;
+    -u=*|--user=*)      user="${arg#*=}";;
+    -p|--print)         repquota -s "$dir"; exit;;
+    -y|--yes)           yes=1;;
     -*)                 echo "Unknown option '$arg'."; print_help;;
     *)                  echo "Unknown argument '$arg'."; print_help;;
 esac; done
@@ -34,14 +37,24 @@ esac; done
 _is_server || { _err "Run from server"; }
 [[ $EUID -eq 0 ]] || { _err "Run with sudo"; }
 
-if _ask_user "set quota $soft/$hard for all users in group $group?"; then
-    _install quota
-    [ -f "$dir/aquota.user" ] || sudo quotacheck -um "$dir"
-    [[ $(quotaon -pu /home | awk '{ print $NF }') == on ]] || quotaon -v "$dir"
-    for user in $(getent -s ldap passwd | awk -F: '{ print $1 }'); do
-        if groups "$user" | grep -qw "$group"; then
-            setquota -u "$user" "$soft" "$hard" 0 0 "$dir"
-        fi
-    done
-    repquota -s "$dir"
+if [[ "$user" ]]; then
+    users="$user"
+    unset group
+else
+    user="all users in group $group"
+    users=$(_get_users)
 fi
+
+if [[ ! $yes ]]; then
+    _ask_user "set quota $soft/$hard for $user?" || exit
+fi
+
+_install quota
+[ -f "$dir/aquota.user" ] || sudo quotacheck -um "$dir"
+[[ $(quotaon -pu /home | awk '{ print $NF }') == on ]] || quotaon -v "$dir"
+for user in $users; do
+    if groups "$user" | grep -qw "$group"; then
+        setquota -u "$user" "$soft" "$hard" 0 0 "$dir"
+    fi
+done
+repquota -s "$dir"

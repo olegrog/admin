@@ -29,7 +29,7 @@ add_ldap_record() {
 
 update_ssh_known_hosts() {
     _topic "Register fingerprint of the SSH server"
-    for user in root $(getent -s ldap passwd | awk -F: '{ print $1 }'); do
+    for user in root $(_get_users); do
         _update_ssh_known_hosts "$user" "$host"
     done
 }
