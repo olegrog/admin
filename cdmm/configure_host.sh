@@ -110,6 +110,7 @@ configure_local_home() {
 }
 
 install_software() {
+    local ubuntu_version nvidia_version
     _topic "Install additional software"
     # Use Lmod instead of Environment Modules
     #_install environment-modules
@@ -120,6 +121,11 @@ install_software() {
     ln -sf /usr/lib/x86_64-linux-gnu/lua/5.2/posix_c.so /usr/lib/x86_64-linux-gnu/lua/5.2/posix.so
     _append /etc/lmod/modulespath /opt/modules
     _append /etc/bash.bashrc ". /etc/profile.d/lmod.sh"
+    ubuntu_version=$(grep -oE '\w+\.\w+' /etc/issue)
+    nvidia_version=$(grep NVIDIA /proc/driver/nvidia/version | grep -oE '\w+\.\w+' | cut -f1 -d.)
+    _install --collection=Drivers \
+        "linux-generic-hwe-$ubuntu_version" "xserver-xorg-hwe-$ubuntu_version" \
+        "linux-modules-nvidia-$nvidia_version-generic-hwe-$ubuntu_version"
     _install --collection=Auxiliary \
         ack vim tcl colordiff kdiff3
     _install --collection=Repository \
