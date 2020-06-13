@@ -109,33 +109,6 @@ configure_local_home() {
     done
 }
 
-# This configuration does not work since snapd rewrite /var/lib/snapd/state.json
-configure_snapd() {
-    local new=/opt/snapd
-    local old=/var/lib/snapd
-    _append /etc/fstab "$new /var/lib/snapd none bind 0 0"
-    if [[ -d "$new" ]] && mount | grep -Fq " $old "; then
-        return
-    else
-        _log "Configure ${CYAN}snapd$WHITE"
-        systemctl disable --now snapd.socket
-        systemctl stop snapd
-        if _is_server; then
-            if [[ ! -d "$new" ]]; then
-                _log "Move $BLUE$old$WHITE to $BLUE$new$WHITE"
-                mv "$old" "$new"
-                mkdir "$old"
-            fi
-        else
-            # Suppress snap auto update on clients
-            snap set system refresh.metered=hold
-        fi
-        mount "$old"
-        systemctl enable --now snapd.socket
-        systemctl start snapd
-    fi
-}
-
 install_software() {
     _topic "Install additional software"
     # Use Lmod instead of Environment Modules
@@ -151,7 +124,6 @@ install_software() {
         ack vim tcl colordiff kdiff3
     _install --collection=Repository \
         aptitude gconf-service software-properties-common snapd
-    #configure_snapd
     _install --collection="from Snap" --snap \
         atom chromium slack telegram-desktop vlc shellcheck julia
     _install --collection="Remote desktop" \
