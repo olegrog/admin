@@ -135,6 +135,13 @@ install_software() {
     _install --collection="Remote desktop" \
         xrdp tigervnc-standalone-server xfce4-session
     _add_user_to_group xrdp ssl-cert
+    _install --collection="Job scheduling" \
+        slurmd slurm-client slurm-wlm-torque
+    # Configure SLURM
+    _copy /etc/munge/munge.key
+    [[ $_modified ]] && _restart_daemon munge
+    _symlink /etc/slurm-llnl/slurm.conf
+    [[ $_modified ]] && _restart_daemon slurmd
     _install --collection=Diagnostic \
         htop pdsh clusterssh ganglia-monitor
     # Configure pdsh
@@ -166,6 +173,21 @@ install_software() {
         libreadline-dev libncurses5-dev libgmp-dev libmpfr-dev libmpc-dev
     _install --collection="for Firedrake" \
         mercurial bison python3-tk python3-venv liboce-ocaf-dev swig
+}
+
+# This function is currently not used, but contains details of server configuration
+install_server_software() {
+    ### SLURM ###
+    _install slurmctld
+
+    mkdir -p $CONFIG/etc/munge
+    cp /etc/munge/munge.key $CONFIG/etc/munge/
+    chown -R munge:munge $CONFIG/etc/munge
+    chmod -R og-rx $CONFIG/etc/munge
+
+    mkdir -p $CONFIG/etc/slurm-llnl
+    mv /etc/slurm-llnl/slurm.conf $CONFIG/etc/slurm-llnl
+    ln -s $CONFIG/etc/slurm-llnl/slurm.conf /etc/slurm-llnl/
 }
 
 # For software installed to /opt from deb packages

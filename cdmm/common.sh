@@ -153,6 +153,29 @@ _copy() {
     cp "$src" "$file"
 }
 
+_symlink() {
+    #shellcheck disable=SC2034
+    _modified=1  # use this global flag to check if file was changed
+    local file=$1
+    local src="$CONFIG/$file"
+    _check_if_file_exists "$src"
+    if [[ -f "$file" ]]; then
+        if [[ -L "$file" ]]; then
+            if [[ ! "$(readlink "$file")" == "$src" ]]; then
+                ln -sf "$src" "$file"
+                _log "Symlink $BLUE$file$WHITE is rewritten"
+            else
+                unset _modified
+            fi
+        else
+            _err "File $BLUE$file$WHITE is not a symlink"
+        fi
+    else
+        ln -sf "$src" "$file"
+        _log "Symlink $BLUE$file$WHITE is created"
+    fi
+}
+
 _ask_user() {
     local request=$1
     read -p "Are you sure to $request (y/N)? " -n 1 -r
