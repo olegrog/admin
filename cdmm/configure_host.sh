@@ -18,8 +18,8 @@ configure_ssh() {
 }
 
 configure_ldap() {
-    unset _is_modified
     _topic "Configure LDAP client for NSS"
+    unset _is_modified
     _log "Set ${CYAN}DebConf$WHITE selections"
     cat <<EOF | debconf-set-selections
 nslcd	        nslcd/ldap-base	string  $LDAP_BASE
@@ -72,8 +72,8 @@ configure_nfs() {
 }
 
 configure_admins() {
-    local admin_key
     _topic "Configure admin permissions"
+    local admin_key
     if ! groups $ADMIN | grep -q sudo; then
         _log "Add $GREEN$ADMIN$WHITE to sudoers"
         usermod -a -G sudo "$ADMIN"
@@ -109,9 +109,8 @@ configure_local_home() {
     done
 }
 
-install_software() {
-    local ubuntu_version nvidia_version
-    _topic "Install additional software"
+configure_environment_modules() {
+    _topic "Configure Environment Modules"
     # Use Lmod instead of Environment Modules
     #_install environment-modules
     #_append /etc/environment-modules/modulespath /opt/modules
@@ -121,6 +120,24 @@ install_software() {
     ln -sf /usr/lib/x86_64-linux-gnu/lua/5.2/posix_c.so /usr/lib/x86_64-linux-gnu/lua/5.2/posix.so
     _append /etc/lmod/modulespath /opt/modules
     _append /etc/bash.bashrc ". /etc/profile.d/lmod.sh"
+}
+
+configure_slurm() {
+    _topic "Configure Slurm"
+    _install --collection="Slurm" \
+        slurmd slurm-client slurm-wlm-torque
+    _copy /etc/munge/munge.key
+    [[ $_modified ]] && _restart_daemon munge
+    _symlink /etc/slurm-llnl/slurm.conf
+    [[ $_modified ]] && _restart_daemon slurmd
+    _postpone_daemon_after_mount slurmd $CONFIG
+    # TODO(olegrog): we have to resume host manually
+    _add_cron "@reboot /usr/bin/scontrol update nodename=$(hostname) state=resume"
+}
+
+install_software() {
+    local ubuntu_version nvidia_version
+    _topic "Install additional software"
     ubuntu_version=$(grep -oE '\w+\.\w+' /etc/issue)
     nvidia_version=$(grep NVIDIA /proc/driver/nvidia/version | grep -oE '\w+\.\w+' | cut -f1 -d.)
     _install --collection=Drivers \
@@ -135,13 +152,6 @@ install_software() {
     _install --collection="Remote desktop" \
         xrdp tigervnc-standalone-server xfce4-session
     _add_user_to_group xrdp ssl-cert
-    _install --collection="Job scheduling" \
-        slurmd slurm-client slurm-wlm-torque
-    # Configure SLURM
-    _copy /etc/munge/munge.key
-    [[ $_modified ]] && _restart_daemon munge
-    _symlink /etc/slurm-llnl/slurm.conf
-    [[ $_modified ]] && _restart_daemon slurmd
     _install --collection=Diagnostic \
         htop pdsh clusterssh ganglia-monitor
     # Configure pdsh
@@ -204,14 +214,7 @@ install_proprietary_software() {
     _append /etc/apt/sources.list.d/teamviewer.list \
         "deb http://linux.teamviewer.com/deb stable main"
     _install --use-opt teamviewer
-    if ! _is_server; then
-        # Configure systemd to run teamviewerd after NFS
-        _append /etc/systemd/system/teamviewerd.service.d/override.conf \
-            "[Unit]" \
-            "After=network.target network-online.target autofs.service" \
-            "RequiresMountsFor=/opt/teamviewer"
-        systemctl daemon-reload # need to run after changes in /etc/systemd
-    fi
+    _postpone_daemon_after_mount teamviewerd /opt/teamviewer
 }
 
 activate_opt_software() {
@@ -246,7 +249,9 @@ if ! _is_server; then
     configure_nfs
     configure_admins
     configure_local_home
+    configure_slurm
 fi
+configure_environment_modules
 install_software
 install_proprietary_software
 activate_opt_software

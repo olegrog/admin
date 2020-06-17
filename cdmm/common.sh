@@ -172,7 +172,7 @@ _symlink() {
         fi
     else
         ln -sf "$src" "$file"
-        _log "Symlink $BLUE$file$WHITE is created"
+        _log "Symlink $BLUE$file$WHITE was created"
     fi
 }
 
@@ -234,5 +234,27 @@ _add_user_to_group() {
     if ! id -nG "$user" | grep -Fq "$group"; then
         _log "Add user $CYAN$user$WHITE to group $CYAN$group$WHITE"
         adduser "$user" "$group"
+    fi
+}
+
+_postpone_daemon_after_mount() {
+    local daemon=$1
+    local dir=$2
+    if ! _is_server; then
+        _append "/etc/systemd/system/$daemon.service.d/override.conf" \
+            "[Unit]" \
+            "After=network.target network-online.target autofs.service" \
+            "RequiresMountsFor=$dir"
+        [[ $_modified ]] && _log "Loading $CYAN$daemon$WHITE is postponed after NFS"
+
+        systemctl daemon-reload # need to run after changes in /etc/systemd
+    fi
+}
+
+_add_cron() {
+    local cmd=$1
+    if ! crontab -l 2> /dev/null | grep -Fq "$cmd"; then
+        _log "Add a new cron task"
+        echo "$cmd" | crontab -
     fi
 }
