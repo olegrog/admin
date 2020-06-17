@@ -148,7 +148,7 @@ install_software() {
     _install --collection=Repository \
         aptitude gconf-service software-properties-common snapd
     _install --collection="from Snap" --snap \
-        atom chromium slack telegram-desktop vlc shellcheck julia
+        atom chromium slack telegram-desktop vlc shellcheck julia julia-mrcinv
     _install --collection="Remote desktop" \
         xrdp tigervnc-standalone-server xfce4-session
     _add_user_to_group xrdp ssl-cert
