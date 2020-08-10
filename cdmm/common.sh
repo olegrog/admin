@@ -37,21 +37,22 @@ _check_if_dir_exists() { [[ -d "$1" ]] || _err "Directory $BLUE$1$WHITE is absen
 _install() {
     unset _installed_now
     declare -a packages not_installed
+    status_cmd() { dpkg -s "$1" | grep -Eq 'Status.*installed'; }
+    install_cmd() { apt-get install -y "$1"; }
+
     for arg; do case $arg in
         --collection=*) local collection=${arg#*=};;
         --use-opt) local use_opt=1;;
         --deb-from-distrib) local deb_from_distrib=1;;
-        --snap) local snap=1;;
+        --snap) status_cmd() { snap list "$1"; }
+                install_cmd() { snap install --classic "$1"; }
+                ;;
+        --pip)  status_cmd() { python3 -c "import $1" 2> /dev/null; }
+                install_cmd() { pip3 install "$1"; }
+                ;;
         *) packages+=("$arg");;
     esac; done
     _is_server && unset use_opt
-    if [[ $snap ]]; then
-        status_cmd() { snap list "$1"; }
-        install_cmd() { snap install --classic "$1"; }
-    else
-        status_cmd() { dpkg -s "$1" | grep -Eq 'Status.*installed'; }
-        install_cmd() { apt-get install -y "$1"; }
-    fi
     for pkg in "${packages[@]}"; do
         local pkg_name="$pkg"
         if [[ $deb_from_distrib ]]; then
