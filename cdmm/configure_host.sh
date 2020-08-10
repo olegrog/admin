@@ -139,10 +139,10 @@ install_software() {
     local ubuntu_version nvidia_version
     _topic "Install additional software"
     ubuntu_version=$(grep -oE '\w+\.\w+' /etc/issue)
-    nvidia_version=$(grep NVIDIA /proc/driver/nvidia/version | grep -oE '\w+\.\w+' | cut -f1 -d.)
+    nvidia_current_version=$(grep NVIDIA /proc/driver/nvidia/version | grep -oE '\w+\.\w+')
+    nvidia_best_version=$(apt-cache search nvidia | grep -oE "nvidia-[0-9]{1,3}" | sort | tail -1)
     _install --collection=Drivers \
-        "linux-generic-hwe-$ubuntu_version" "xserver-xorg-hwe-$ubuntu_version" \
-        "linux-modules-nvidia-$nvidia_version-generic-hwe-$ubuntu_version"
+        "linux-modules-$nvidia_best_version-generic"
     _install --collection=Auxiliary \
         ack vim tcl colordiff kdiff3
     _install --collection=Repository \
