@@ -82,7 +82,7 @@ register_user() {
     userdel -f "$user"
     for host in $(_get_hosts); do
         [[ "$(hostname)" == "$host" ]] && continue
-        _log "Restart AutoFS on $host"
+        _log "Restart AutoFS at $host"
         ssh "$host" systemctl restart autofs
     done
 }
@@ -110,10 +110,21 @@ generate_additional_files() {
     fi
 }
 
+create_local_home() {
+    local dir="/home-local/$user"
+    for host in $(_get_hosts); do
+        [[ "$(hostname)" == "$host" ]] && continue
+        _log "Make directory $BLUE$dir$WHITE at $host"
+        ssh "$host" mkdir -p "$dir"
+        ssh "$host" chown -R "$user:$group" "$dir"
+    done
+}
+
 if _ask_user "add ${first_name^} ${last_name^} as user $user"; then
     check_host_reachability # we need it to capture fingerprint of all SSH servers
     register_user
     configure_ssh_directory
     generate_additional_files
+    create_local_home
     "$(dirname "$0")"/set_quota.sh -y --user="$user"
 fi
