@@ -91,7 +91,7 @@ configure_local_home() {
     get_device() {
         basename "$(mount | grep " $1 " | cut -f1 -d' ' | sed 's/[0-9]*//g')"
     }
-    [[ -d "$LOCAL_HOME" ]] || { _warn "Directory $BLUE$LOCAL_HOME$WHITE does not exists"; return; }
+    [[ -d "$LOCAL_HOME" ]] || { _warn "Directory $BLUE$LOCAL_HOME$RED does not exists"; return; }
     root_device=$(get_device '/');
     if [[ -d "/sys/block/$root_device" \
         && "$(cat /sys/block/"$root_device"/queue/rotational)" -eq 0 ]]; then
@@ -116,8 +116,6 @@ configure_environment_modules() {
     #_append /etc/environment-modules/modulespath /opt/modules
     #_append /etc/bash.bashrc ". /etc/profile.d/modules.sh"
     _install lmod
-    # TODO(olegrog): the following line fixes the current Ubuntu 18.04 bug
-    ln -sf /usr/lib/x86_64-linux-gnu/lua/5.2/posix_c.so /usr/lib/x86_64-linux-gnu/lua/5.2/posix.so
     _append /etc/lmod/modulespath /opt/modules
     _append /etc/bash.bashrc ". /etc/profile.d/lmod.sh"
 }
@@ -136,15 +134,13 @@ configure_slurm() {
 }
 
 install_software() {
-    local ubuntu_version nvidia_version
+    local nvidia_best_version
     _topic "Install additional software"
-    ubuntu_version=$(grep -oE '\w+\.\w+' /etc/issue)
-    nvidia_current_version=$(grep NVIDIA /proc/driver/nvidia/version | grep -oE '\w+\.\w+')
     nvidia_best_version=$(apt-cache search nvidia | grep -oE "nvidia-[0-9]{1,3}" | sort | tail -1)
+    _install --collection=Auxiliary \
+        ack vim tcl kdiff3
     _install --collection=Drivers \
         "linux-modules-$nvidia_best_version-generic"
-    _install --collection=Auxiliary \
-        ack vim tcl colordiff kdiff3
     _install --collection=Repository \
         aptitude gconf-service software-properties-common snapd
     _install --collection="from Snap" --snap \
@@ -172,14 +168,14 @@ install_software() {
     _install --collection="C++ Libraries" \
         libboost-all-dev libblas-dev liblapack-dev zlib1g-dev trilinos-all-dev
     _install --collection=Python3 \
-        python3-pip python3-numpy python3-scipy python3-sympy python3-matplotlib pylint3 \
+        python3-pip python3-numpy python3-scipy python3-sympy python3-matplotlib pylint \
         python3-mpi4py python3-numba python3-keras
     [[ $_installed_now ]] && pip3 install --upgrade pip numpy scipy sympy matplotlib pylint
     _install --pip tensorflow
     _install --collection=MPI \
         openmpi-common openmpi-bin libopenmpi-dev
     _install --collection="for Basilisk" \
-        darcs gifsicle pstoedit swig libpython-dev libosmesa6-dev libglew-dev
+        darcs gifsicle pstoedit swig libpython3-dev libosmesa6-dev libglew-dev
     _install --collection="for OpenFOAM" \
         libreadline-dev libncurses5-dev libgmp-dev libmpfr-dev libmpc-dev
     _install --collection="for Firedrake" \
@@ -204,7 +200,9 @@ install_server_software() {
 # For software installed to /opt from deb packages
 install_proprietary_software() {
     # Old way:
-    #_install --use-opt --deb-from-distrib "teamviewer_*_amd64.deb"
+    #_append /etc/apt/sources.list.d/teamviewer.list \
+    #    "deb http://linux.teamviewer.com/deb stable main"
+    #_install --use-opt teamviewer
     #_append /etc/apt/sources.list.d/google-chrome.list \
     #    "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main"
     #if [[ $_modified ]]; then
@@ -212,9 +210,7 @@ install_proprietary_software() {
     #    apt-get update
     #fi
     _install --use-opt --deb-from-distrib google-chrome-stable_current_amd64.deb
-    _append /etc/apt/sources.list.d/teamviewer.list \
-        "deb http://linux.teamviewer.com/deb stable main"
-    _install --use-opt teamviewer
+    _install --use-opt --deb-from-distrib "teamviewer_*_amd64.deb"
     _postpone_daemon_after_mount teamviewerd /opt/teamviewer
 }
 
@@ -243,11 +239,15 @@ if [[ -t 1 ]]; then
 fi
 
 _block "Configure" "$(hostname)"
-_check_if_dir_exists "$CONFIG"
+
+_install --collection="Precursory" \
+    colordiff
+
 if ! _is_server; then
     configure_ssh
     configure_ldap
     configure_nfs
+    _check_if_dir_exists "$CONFIG"
     configure_admins
     configure_local_home
     configure_slurm

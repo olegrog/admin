@@ -18,9 +18,9 @@ add_ldap_record() {
     # Take one of hosts registered in LDAP
     read -r aip ahost <<< "$(getent -s ldap hosts | tail -1)"
     ldapsearch -x -LLL -b "cn=$host,$ldap_hosts" 2>/dev/null \
-        && _err "Host $host is already registered"
+        && { _warn "Host $host is already registered"; return; }
     ldapsearch -x -LLL -b "$ldap_hosts" ipHostNumber \
-        | grep -q " $ip$" && _err "Host $ip is already registered."
+        | grep -q " $ip$" && { _warn "Host $ip is already registered."; return; }
     ldapsearch -x -LLL -b "cn=$ahost,$ldap_hosts" \
         | sed "s/$ahost/$host/; s/$aip/$ip/" \
         | ldapadd -x -D "cn=admin,$LDAP_BASE" -y /etc/ldap.secret

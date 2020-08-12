@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Colors
-declare -xr RED='\033[1;31m'        # for errors
+declare -xr RED='\033[1;31m'        # for errors, warnings
 declare -xr GREEN='\033[1;32m'      # for user/host names
 declare -xr YELLOW='\033[1;33m'     # for highlighing
 declare -xr BLUE='\033[1;34m'       # for file names
@@ -31,8 +31,8 @@ _is_server() { systemctl is-active -q slapd; } # Checks if LDAP server is active
 _get_home() { local user=$1; getent passwd "$user" | cut -d: -f6; }
 _get_hosts() { getent -s ldap hosts | awk '{ print $2 }'; }
 _get_users() { getent -s ldap passwd | awk -F: '{ print $1 }'; }
-_check_if_file_exists() { [[ -f "$1" ]] || _err "File $BLUE$1$WHITE is absent"; }
-_check_if_dir_exists() { [[ -d "$1" ]] || _err "Directory $BLUE$1$WHITE is absent"; }
+_check_if_file_exists() { [[ -f "$1" ]] || _err "File $BLUE$1$RED is absent"; }
+_check_if_dir_exists() { [[ -d "$1" ]] || _err "Directory $BLUE$1$RED is absent"; }
 
 _install() {
     unset _installed_now
@@ -113,6 +113,7 @@ _append() {
     # Append lines one by one
     for line in "$@"; do
         [[ -z "$line" ]] && _err "An empty string is provided"
+        [[ -f "$file" ]] || { touch "$file"; _log "Create $BLUE$file$WHITE"; }
         grep -Fq "$line" "$file" && continue
         echo -e "$line" >> "$file"
         #shellcheck disable=SC2034
