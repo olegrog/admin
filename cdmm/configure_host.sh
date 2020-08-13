@@ -138,7 +138,7 @@ install_software() {
     _topic "Install additional software"
     nvidia_best_version=$(apt-cache search nvidia | grep -oE "nvidia-[0-9]{1,3}" | sort | tail -1)
     _install --collection=Auxiliary \
-        ack vim tcl kdiff3
+        ack vim tcl kdiff3 mlocate
     _install --collection=Drivers \
         "linux-modules-$nvidia_best_version-generic"
     _install --collection=Repository \
@@ -256,4 +256,8 @@ configure_environment_modules
 install_software
 install_proprietary_software
 activate_opt_software
+
+_topic "Update database for mlocate"
+updatedb
+
 _topic "All work has been successfully completed"
