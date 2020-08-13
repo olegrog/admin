@@ -18,9 +18,9 @@ add_ldap_record() {
     # Take one of hosts registered in LDAP
     read -r aip ahost <<< "$(getent -s ldap hosts | tail -1)"
     ldapsearch -x -LLL -b "cn=$host,$ldap_hosts" 2>/dev/null \
-        && { _warn "Host $host is already registered"; return; }
+        && { _warn "Host $GREEN$host$RED is already registered"; return; }
     ldapsearch -x -LLL -b "$ldap_hosts" ipHostNumber \
-        | grep -q " $ip$" && { _warn "Host $ip is already registered."; return; }
+        | grep -q " $ip$" && { _warn "Host $GREEN$ip$RED is already registered."; return; }
     ldapsearch -x -LLL -b "cn=$ahost,$ldap_hosts" \
         | sed "s/$ahost/$host/; s/$aip/$ip/" \
         | ldapadd -x -D "cn=admin,$LDAP_BASE" -y /etc/ldap.secret
@@ -37,9 +37,20 @@ update_ssh_known_hosts() {
 update_configs() {
     _topic "Register a new host in config files"
     local ncores
+    local slurm="$CONFIG/etc/slurm-llnl/slurm.conf"
     ncores=$(lscpu -e=Core | grep '[0-9]' | sort -u | wc -l)
     _append "$CONFIG/hostfile" "$(printf '%-12s%s\n' "$host" "slots=$ncores")"
     _append "$CONFIG/hosts" "$host"
+
+    grep -Fq "$host" "$slurm" && return
+    _log "Add $GREEN$host$WHITE to the SLURM config"
+    cp "$slurm" "$slurm~"
+    awk 'FNR==NR {if ($0~/State=UNKNOWN/) f=NR; next} FNR==f {$1=$1",'$host'"} 1' \
+        "$slurm~" "$slurm~" > "$slurm~~"
+    awk 'FNR==NR {if ($0~/PartitionName=/) f=NR; next} FNR==f {$2=$2",'$host'"} 1' \
+        "$slurm~~" "$slurm~~" > "$slurm"
+    rm "$slurm~~"
+    colordiff "$slurm" "$slurm~"
 }
 
 if _ask_user "add $host with IP $ip"; then
