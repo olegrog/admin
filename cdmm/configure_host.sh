@@ -138,7 +138,7 @@ install_software() {
     _topic "Install additional software"
     nvidia_best_version=$(apt-cache search nvidia | grep -oE "nvidia-[0-9]{1,3}" | sort | tail -1)
     _install --collection=Auxiliary \
-        ack vim tcl kdiff3 mlocate
+        ack ripgrep vim ranger tcl kdiff3 meld mlocate tldr
     _install --collection=Drivers \
         "linux-modules-$nvidia_best_version-generic"
     _install --collection=Repository \
@@ -149,7 +149,7 @@ install_software() {
         xrdp tigervnc-standalone-server xfce4-session
     _add_user_to_group xrdp ssl-cert
     _install --collection=Diagnostic \
-        htop pdsh clusterssh ganglia-monitor
+        htop pdsh clusterssh ganglia-monitor ncdu
     # Configure pdsh
     _append /etc/profile.d/pdsh.sh "export PDSH_RCMD_TYPE=ssh"
     _append /etc/profile.d/pdsh.sh "export WCOLL=$CONFIG/hosts"
@@ -158,16 +158,16 @@ install_software() {
     _copy /etc/ganglia/gmond.conf
     [[ $_modified ]] && _restart_daemon ganglia-monitor
     _install --collection=Compilers \
-        g++-8 gfortran-8 clang-8 clang-tools-8
+        g++ gfortran clang clang-tidy clang-format clang-tools
     _install --collection=Development \
-        valgrind git subversion cmake flex build-essential doxygen
+        valgrind git subversion cmake flex build-essential doxygen pax-utils
     _install --collection=Multimedia \
         ffmpeg imagemagick smpeg-plaympeg graphviz
     _install --collection=Visualization \
-        gnuplot paraview
+        gnuplot paraview gmsh
     _install --collection="C++ Libraries" \
         libboost-all-dev libblas-dev liblapack-dev zlib1g-dev trilinos-all-dev
-    _install --collection=Python3 \
+    _install --collection=Python \
         python3-pip python3-numpy python3-scipy python3-sympy python3-matplotlib pylint \
         python3-mpi4py python3-numba python3-keras
     [[ $_installed_now ]] && pip3 install --upgrade pip numpy scipy sympy matplotlib pylint
