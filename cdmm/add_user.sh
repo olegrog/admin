@@ -107,6 +107,7 @@ generate_additional_files() {
         _log "Upload the avatar"
         cp "$face" "$home/.face"
         chown "$user:$group" "$home/.face"
+        chmod 644 "$home/.face"
     fi
 }
 
