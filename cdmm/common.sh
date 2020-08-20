@@ -216,9 +216,12 @@ _update_ssh_known_hosts() {
     local hosts=("$@")
     local home; home=$(_get_home "$user")
     local known_hosts="$home/.ssh/known_hosts"
-    _log "Add $GREEN${hosts[*]}$WHITE to $BLUE$known_hosts$WHITE"
+    local line
     touch "$known_hosts"
     for host in "${hosts[@]}"; do
+        line=$(ssh-keyscan -t ecdsa-sha2-nistp256 "$host" 2> /dev/null)
+        grep -Fq "$line" "$known_hosts" && continue
+        _log "Add $GREEN$host$WHITE to $BLUE$known_hosts$WHITE"
         # Iterate over both ip and hostname
         for hostname in $(getent -s ldap hosts | grep "$host"); do
             # Remove old fingerprints and add a new one

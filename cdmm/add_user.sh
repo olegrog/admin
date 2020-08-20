@@ -93,7 +93,7 @@ configure_ssh_directory() {
     mapfile -t hosts < <(_get_hosts)
     if [[ ! -f $home/.ssh/id_rsa.pub ]]; then
         _log "Generate a local RSA key"
-        sudo -u "$user" ssh-keygen -t rsa -P "" < /dev/zero
+        sudo -u "$user" cat /dev/zero | ssh-keygen -t rsa -P ""
     fi
     _add_ssh_key "$user" "$pubkey"
     _add_ssh_key "$user" "$(_get_home "$user")"/.ssh/id_rsa.pub

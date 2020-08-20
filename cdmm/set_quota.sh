@@ -34,8 +34,8 @@ for arg; do case $arg in
     *)                  echo "Unknown argument '$arg'."; print_help;;
 esac; done
 
-_is_server || { _err "Run from server"; }
-[[ $EUID -eq 0 ]] || { _err "Run with sudo"; }
+_is_server || _err "Run from the server"
+[[ $EUID -eq 0 ]] || _err "Run with sudo"
 
 if [[ "$user" ]]; then
     users="$user"
