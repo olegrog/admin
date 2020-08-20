@@ -10,9 +10,10 @@ ip=$2
 source "$(dirname "$0")/common.sh"
 
 nc -z -w 2 "$ip" 22 || _err "Host $ip is not reachable"
+_is_server || _err "Run from the server"
 
 add_ldap_record() {
-    _log "Add LDAP record"
+    _log "Add an LDAP record"
     local ldap_hosts="ou=Hosts,$LDAP_BASE"
     local aip ahost
     # Take one of hosts registered in LDAP
@@ -25,6 +26,7 @@ add_ldap_record() {
         | sed "s/$ahost/$host/; s/$aip/$ip/" \
         | ldapadd -x -D "cn=admin,$LDAP_BASE" -y /etc/ldap.secret
     _restart_daemon nscd
+    _log "Host $GREEN$host$RED is added to LDAP"
 }
 
 update_ssh_known_hosts() {
@@ -38,19 +40,33 @@ update_configs() {
     _topic "Register a new host in config files"
     local ncores
     local slurm="$CONFIG/etc/slurm-llnl/slurm.conf"
-    ncores=$(lscpu -e=Core | grep '[0-9]' | sort -u | wc -l)
+    ncores=$(ssh "$host" lscpu -e=Core | grep '[0-9]' | sort -u | wc -l)
     _append "$CONFIG/hostfile" "$(printf '%-12s%s\n' "$host" "slots=$ncores")"
     _append "$CONFIG/hosts" "$host"
 
-    grep -Fq "$host" "$slurm" && return
-    _log "Add $GREEN$host$WHITE to the SLURM config"
-    cp "$slurm" "$slurm~"
-    awk 'FNR==NR {if ($0~/State=UNKNOWN/) f=NR; next} FNR==f {$1=$1",'$host'"} 1' \
-        "$slurm~" "$slurm~" > "$slurm~~"
-    awk 'FNR==NR {if ($0~/PartitionName=/) f=NR; next} FNR==f {$2=$2",'$host'"} 1' \
-        "$slurm~~" "$slurm~~" > "$slurm"
-    rm "$slurm~~"
-    colordiff "$slurm" "$slurm~"
+    if grep -Fq "NodeName=$host" "$slurm"; then
+        _warn "Host $GREEN$host$RED is already registered in SLURM"
+    else
+        _log "Add $GREEN$host$WHITE to the SLURM config"
+        cp "$slurm" "$slurm~"
+        # Define a new NodeName
+        awk '
+            FNR==NR { if (/NodeName=/) f=NR; next } 1;
+            FNR==f { print "NodeName='"$host"' CPUs='"$ncores"' State=UNKNOWN" }
+        ' "$slurm~" "$slurm~" > "$slurm~~"
+        # Add node to the last partition
+        awk '
+            FNR==NR { if ($0~/PartitionName=/) f=NR; next }
+            FNR==f { $2=$2",'"$host"'" } 1
+        ' "$slurm~~" "$slurm~~" > "$slurm"
+        rm "$slurm~~"
+        colordiff "$slurm" "$slurm~"
+        _log "Instruct ${CYAN}slurmctld$WHITE to re-read ${BLUE}slurm.conf$WHITE"
+        scontrol reconfigure
+        _log "Change status of $GREEN$host$WHITE"
+        scontrol update nodename="$host" state=idle
+    fi
+    sinfo --Node
 }
 
 if _ask_user "add $host with IP $ip"; then
