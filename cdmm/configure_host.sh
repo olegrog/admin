@@ -172,12 +172,15 @@ install_software() {
         ffmpeg imagemagick smpeg-plaympeg graphviz
     _install --collection=Visualization \
         gnuplot paraview gmsh
-    _install --collection="C++ Libraries" \
+    _install --collection="C++ libraries" \
         libboost-all-dev libblas-dev liblapack-dev zlib1g-dev trilinos-all-dev
+    _install --collection="CUDA libraries" \
+        nvidia-cuda-toolkit nvidia-cuda-gdb
     _install --collection=Python \
         python3-pip python3-numpy python3-scipy python3-sympy python3-matplotlib pylint \
         python3-mpi4py python3-numba python3-keras
-    [[ $_installed_now ]] && pip3 install --upgrade pip numpy scipy sympy matplotlib pylint
+    [[ $_installed_now ]] && pip3 install --upgrade pip numpy scipy sympy matplotlib pylint \
+        mpi4py numba keras
     _install --pip tensorflow
     _install --collection=MPI \
         openmpi-common openmpi-bin libopenmpi-dev
