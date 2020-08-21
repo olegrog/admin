@@ -109,6 +109,13 @@ configure_local_home() {
     done
 }
 
+configure_virtual_memory() {
+    _topic "Configure Virtual Memory behavior"
+    # https://remoteshaman.com/unix/common/overcommitting-linux-memory-and-admin-reserve-kbytes
+    _append /etc/sysctl.d/60-oom.conf "vm.oom_kill_allocating_task = 1"
+    sysctl -w vm.oom_kill_allocating_task=1
+}
+
 configure_environment_modules() {
     _topic "Configure Environment Modules"
     # Use Lmod instead of Environment Modules
@@ -252,6 +259,7 @@ if ! _is_server; then
     configure_local_home
     configure_slurm
 fi
+configure_virtual_memory
 configure_environment_modules
 install_software
 install_proprietary_software
