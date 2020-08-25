@@ -113,7 +113,7 @@ configure_virtual_memory() {
     _topic "Configure Virtual Memory behavior"
     # https://remoteshaman.com/unix/common/overcommitting-linux-memory-and-admin-reserve-kbytes
     _append /etc/sysctl.d/60-oom.conf "vm.oom_kill_allocating_task = 1"
-    sysctl -w vm.oom_kill_allocating_task=1
+    sysctl -w vm.oom_kill_allocating_task=1 > /dev/null
 }
 
 configure_environment_modules() {
@@ -152,11 +152,12 @@ install_software() {
         aptitude gconf-service software-properties-common snapd
     _install --collection="from Snap" --snap \
         atom chromium slack telegram-desktop vlc shellcheck julia julia-mrcinv
+    _refresh_snap julia-mrcinv edge
     _install --collection="Remote desktop" \
         xrdp tigervnc-standalone-server xfce4-session
     _add_user_to_group xrdp ssl-cert
     _install --collection=Diagnostic \
-        htop pdsh clusterssh ganglia-monitor ncdu
+        htop pdsh clusterssh ganglia-monitor ncdu nmap mesa-utils
     # Configure pdsh
     _append /etc/profile.d/pdsh.sh "export PDSH_RCMD_TYPE=ssh"
     _append /etc/profile.d/pdsh.sh "export WCOLL=$CONFIG/hosts"

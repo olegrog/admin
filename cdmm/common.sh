@@ -98,6 +98,14 @@ _install() {
     fi
 }
 
+_refresh_snap() {
+    local package=$1
+    local channel=$2
+    if ! snap info "$package" | grep -q "track.*$channel"; then
+        snap refresh "--$channel" "$package"
+    fi
+}
+
 _append() {
     unset _modified
     local header
