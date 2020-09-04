@@ -9,9 +9,10 @@ Usage: ./$(basename "$0") [<options>] [<file> ...]
 Options:
   -a, --accelerate=<factor> Accelerate playback in <factor> times.
   -c, --compatibility       Use the highest level of compatibility (~25% extra size).
+  -e, --extension=<ext>     Output file extension (mp4 by default).
   -q, --quality=<crf>       Change CRF (Constant Rate Factor),
       where 0 is lossless, 23 is the default, and 51 is worst quality possible.
-  -e, --extension=<ext>     Output file extension (mp4 by default).
+  -r, --resize=<factor>     Reduce the resolution by <factor> times.
   -s, --suffix=<word>       Output file name suffix (_compressed by default).
   -h, --help                Print this help.
 EOF
@@ -32,6 +33,7 @@ declare -a files
 extension='mp4'
 suffix='_compressed'
 accel=1
+resize=1
 
 fatal_err() {
     local msg="$1"
@@ -42,8 +44,9 @@ fatal_err() {
 for arg; do case $arg in
     -a=*|--accelerate=*)    accel=${arg#*=};;
     -c|--compatibility)     compat=1;;
-    -q=*|--quality=*)       options+=("-crf ${arg#*=}");;
     -e=*|--extension=*)     extension=${arg#*=};;
+    -q=*|--quality=*)       options+=("-crf ${arg#*=}");;
+    -r=*|--resize=*)        resize=${arg#*=};;
     -s=*|--suffix=*)        suffix=${arg#*=};;
     -h|--help)              print_help; exit 0;;
     -*)                     fatal_err "Unknown option '$arg'.";;
@@ -62,7 +65,7 @@ for file in "${files[@]}"; do
     out=${file%.*}$suffix.$extension
     fps=$(ffmpeg -i "$file" 2>&1 | grep -oE "[0-9]+ fps" | sed 's/ fps//')
     local_options=(
-        -vf "fps=$fps*$accel,setpts=PTS/$accel"
+        -vf "fps=$fps*$accel,setpts=PTS/$accel,scale=iw/$resize:ih/$resize"
     )
     set -x
     ffmpeg -i "$file" "${options[@]}" "${local_options[@]}" "$out"
