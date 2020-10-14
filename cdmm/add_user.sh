@@ -93,7 +93,8 @@ configure_ssh_directory() {
     mapfile -t hosts < <(_get_hosts)
     if [[ ! -f $home/.ssh/id_rsa.pub ]]; then
         _log "Generate a local RSA key"
-        sudo -u "$user" cat /dev/zero | ssh-keygen -t rsa -P ""
+        #shellcheck disable=SC2024
+        sudo -u "$user" ssh-keygen -t rsa -P "" < /dev/zero
     fi
     _add_ssh_key "$user" "$pubkey"
     _add_ssh_key "$user" "$(_get_home "$user")"/.ssh/id_rsa.pub
@@ -115,7 +116,7 @@ create_local_home() {
     local dir="/home-local/$user"
     for host in $(_get_hosts); do
         [[ "$(hostname)" == "$host" ]] && continue
-        _log "Make directory $BLUE$dir$WHITE at $host"
+        _log "Make directory $BLUE$dir$WHITE at $GREEN$host$WHITE"
         ssh "$host" mkdir -p "$dir"
         ssh "$host" chown -R "$user:$group" "$dir"
     done
@@ -128,4 +129,5 @@ if _ask_user "add ${first_name^} ${last_name^} as user $user"; then
     generate_additional_files
     create_local_home
     "$(dirname "$0")"/set_quota.sh -y --user="$user"
+    _topic "User $GREEN$user$YELLOW has been added successfully!"
 fi

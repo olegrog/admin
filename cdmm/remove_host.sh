@@ -9,10 +9,14 @@ host=$1
 source "$(dirname "$0")/common.sh"
 
 if _ask_user "remove $host"; then
+    slurm="$CONFIG/etc/slurm-llnl/slurm.conf"
     _log "Remove record in LDAP"
     ldapdelete -x -D "cn=admin,$LDAP_BASE" -y /etc/ldap.secret "cn=$host,ou=Hosts,$LDAP_BASE" \
         || _failed
     _purge "$CONFIG/hostfile" "$host"
     _purge "$CONFIG/hosts" "$host"
+    _log "Purge the SLURM config"
+    sed -i~ "/NodeName=$host/d;s/,$host//" "$slurm"
+    colordiff "$slurm~" "$slurm"
     _topic "Host $host is successfully deleted!"
 fi
