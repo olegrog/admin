@@ -134,7 +134,7 @@ configure_slurm() {
     _copy /etc/munge/munge.key
     [[ $_modified ]] && _restart_daemon munge
     _symlink /etc/slurm-llnl/slurm.conf
-    [[ $_modified ]] && _restart_daemon slurmd
+    [[ $_modified ]] && { sleep 1; _restart_daemon slurmd; }
     _postpone_daemon_after_mount slurmd $CONFIG
     # TODO(olegrog): we have to resume host manually
     _add_cron "@reboot /usr/bin/scontrol update nodename=$(hostname) state=resume"
@@ -142,12 +142,12 @@ configure_slurm() {
 
 install_software() {
     local nvidia_best_version
+    nvidia_best_version=$(apt-cache search nvidia | grep -oE "nvidia-[0-9]{1,3}" | grep -o [0-9]* | sort | tail -1)
     _topic "Install additional software"
-    nvidia_best_version=$(apt-cache search nvidia | grep -oE "nvidia-[0-9]{1,3}" | sort | tail -1)
-    _install --collection=Auxiliary \
-        ack ripgrep vim ranger tcl kdiff3 meld mlocate tldr
     _install --collection=Drivers \
-        "linux-modules-$nvidia_best_version-generic"
+        "nvidia-driver-$nvidia_best_version"
+    _install --collection=Auxiliary \
+        ack ripgrep vim ranger tcl kdiff3 meld mlocate tldr tmux
     _install --collection=Repository \
         aptitude gconf-service software-properties-common snapd
     _install --collection="from Snap" --snap \
@@ -179,7 +179,7 @@ install_software() {
         nvidia-cuda-toolkit nvidia-cuda-gdb
     _install --collection=Python \
         python3-pip python3-numpy python3-scipy python3-sympy python3-matplotlib pylint \
-        python3-mpi4py python3-numba python3-keras
+        python3-mpi4py python3-numba python3-keras jupyter
     [[ $_installed_now ]] && pip3 install --upgrade pip numpy scipy sympy matplotlib pylint \
         mpi4py numba keras
     _install --pip tensorflow

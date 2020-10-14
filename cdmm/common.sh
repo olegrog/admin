@@ -228,8 +228,11 @@ _update_ssh_known_hosts() {
     touch "$known_hosts"
     for host in "${hosts[@]}"; do
         line=$(ssh-keyscan -t ecdsa-sha2-nistp256 "$host" 2> /dev/null)
-        grep -Fq "$line" "$known_hosts" && continue
-        _log "Add $GREEN$host$WHITE to $BLUE$known_hosts$WHITE"
+        if grep -Fq "$line" "$known_hosts"; then
+            _warn "Rewrite fingerprint of $GREEN$host$RED in $BLUE$known_hosts$WHITE"
+        else
+            _log "Add $GREEN$host$WHITE to $BLUE$known_hosts$WHITE"
+        fi
         # Iterate over both ip and hostname
         for hostname in $(getent -s ldap hosts | grep "$host"); do
             # Remove old fingerprints and add a new one

@@ -26,7 +26,7 @@ add_ldap_record() {
         | sed "s/$ahost/$host/; s/$aip/$ip/" \
         | ldapadd -x -D "cn=admin,$LDAP_BASE" -y /etc/ldap.secret
     _restart_daemon nscd
-    _log "Host $GREEN$host$RED is added to LDAP"
+    _log "Host $GREEN$host$WHITE is added to LDAP"
 }
 
 update_ssh_known_hosts() {
@@ -60,7 +60,7 @@ update_configs() {
             FNR==f { $2=$2",'"$host"'" } 1
         ' "$slurm~~" "$slurm~~" > "$slurm"
         rm "$slurm~~"
-        colordiff "$slurm" "$slurm~"
+        colordiff "$slurm~" "$slurm"
         _log "Instruct ${CYAN}slurmctld$WHITE to re-read ${BLUE}slurm.conf$WHITE"
         scontrol reconfigure
         _log "Change status of $GREEN$host$WHITE"
@@ -73,5 +73,5 @@ if _ask_user "add $host with IP $ip"; then
     add_ldap_record
     update_ssh_known_hosts
     update_configs
-    _topic "Host $host has been added successfully!"
+    _topic "Host $GREEN$host$YELLOW has been added successfully!"
 fi

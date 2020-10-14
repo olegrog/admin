@@ -9,6 +9,7 @@ Options:
   --soft=<size>           Set a soft user limit.
   --hard=<size>           Set a hard user limit.
   --group=<group>         Set quotes for users that belong to this group.
+  --user=<user>           Set quota for specified user only
   --help                  Print this help.
 EOF
     exit 1;
