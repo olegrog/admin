@@ -1,10 +1,10 @@
 #!/bin/bash -e
 
-[[ $# -eq 0 ]] || { echo "Usage: ./$(basename "$0")"; exit 1; }
-[[ "$HOME" == /root ]] || { echo "Run with sudo -H."; exit 1; }
-
 # shellcheck source=./common.sh
 source "$(dirname "$0")/common.sh"
+
+[[ $# -eq 0 ]] || { echo "Usage: ./$(basename "$0")"; exit 1; }
+[[ "$HOME" == /root ]] || _err "Run with sudo -H"
 
 configure_ssh() {
     _topic "Configure SSH"
@@ -142,7 +142,8 @@ configure_slurm() {
 
 install_software() {
     local nvidia_best_version
-    nvidia_best_version=$(apt-cache search nvidia | grep -oE "nvidia-[0-9]{1,3}" | grep -o [0-9]* | sort | tail -1)
+    nvidia_best_version=$(apt-cache search nvidia \
+        | grep -oE "nvidia-[0-9]{1,3}" | grep -o '[0-9]*' | sort | tail -1)
     _topic "Install additional software"
     _install --collection=Drivers \
         "nvidia-driver-$nvidia_best_version"
@@ -193,8 +194,8 @@ install_software() {
         mercurial bison python3-tk python3-venv liboce-ocaf-dev swig
 }
 
-# This function is currently not used, but contains details of server configuration
-install_server_software() {
+# This function is currently not used, but contains details of master host configuration
+install_software_on_master_host() {
     ### SLURM ###
     _install slurmctld
 
@@ -206,6 +207,13 @@ install_server_software() {
     mkdir -p $CONFIG/etc/slurm-llnl
     mv /etc/slurm-llnl/slurm.conf $CONFIG/etc/slurm-llnl
     ln -s $CONFIG/etc/slurm-llnl/slurm.conf /etc/slurm-llnl/
+
+    ### Software RAID ###
+    local device=/dev/md0
+    local fstype; fstype="$(blkid -o value -s TYPE "$device")"
+    _install mdadm
+    _append /etc/mdadm/mdadm.conf "$(mdadm --detail --scan)"
+    _append /etc/fstab "$device\t/home\t$fstype\tdefaults,usrquota\t0\t2"
 }
 
 # For software installed to /opt from deb packages
@@ -234,7 +242,7 @@ activate_opt_software() {
 
 if [[ -t 1 ]]; then
     # We are in the interactive mode
-    if _is_server; then
+    if _is_master; then
         if _ask_user "reconfigure all hosts"; then
             for host in $(_get_hosts); do
                 [[ "$(hostname)" == "$host" ]] && continue
@@ -254,7 +262,7 @@ _block "Configure" "$(hostname)"
 _install --collection="Precursory" \
     colordiff
 
-if ! _is_server; then
+if ! _is_master; then
     configure_ssh
     configure_ldap
     configure_nfs

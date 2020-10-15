@@ -27,7 +27,7 @@ _failed() { echo -e "--$RED Failed!$NC"; }
 _topic() { echo -e "===$YELLOW $* $NC"===; }
 _line() { printf '=%.0s' $(seq -7 ${#1}); printf '\n'; }
 _block() { _line "$1 $2"; echo -e "=== $1 $GREEN$2$NC ==="; _line "$1 $2"; }
-_is_server() { systemctl is-active -q slapd; } # Checks if LDAP server is active
+_is_master() { systemctl is-active -q slapd; } # Checks if LDAP server is active
 _get_home() { local user=$1; getent passwd "$user" | cut -d: -f6; }
 _get_hosts() { getent -s ldap hosts | awk '{ print $2 }'; }
 _get_users() { getent -s ldap passwd | awk -F: '{ print $1 }'; }
@@ -52,7 +52,7 @@ _install() {
                 ;;
         *) packages+=("$arg");;
     esac; done
-    _is_server && unset use_opt
+    _is_master && unset use_opt
     for pkg in "${packages[@]}"; do
         local pkg_name="$pkg"
         if [[ $deb_from_distrib ]]; then
@@ -203,6 +203,16 @@ _restart_daemon() {
     systemctl restart "$service"
 }
 
+_restart_daemon_on_slave_hosts() {
+    local service=$1
+    for host in $(_get_hosts); do
+        [[ "$(hostname)" == "$host" ]] && continue
+        _log "Restart $CYAN$service$WHITE at $GREEN$host$WHITE"
+        #shellcheck disable=SC2029
+        ssh "$host" systemctl restart "$service"
+    done
+}
+
 _add_ssh_key() {
     local user=$1
     local keyfile=$2
@@ -229,14 +239,15 @@ _update_ssh_known_hosts() {
     for host in "${hosts[@]}"; do
         line=$(ssh-keyscan -t ecdsa-sha2-nistp256 "$host" 2> /dev/null)
         if grep -Fq "$line" "$known_hosts"; then
-            _warn "Rewrite fingerprint of $GREEN$host$RED in $BLUE$known_hosts$WHITE"
-        else
-            _log "Add $GREEN$host$WHITE to $BLUE$known_hosts$WHITE"
+            _warn "Remove the fingerprint of $GREEN$host$RED in $BLUE$known_hosts$RED"
+            # Iterate over both ip and hostname
+            for hostname in $(getent -s ldap hosts | grep "$host"); do
+                ssh-keygen -R "$hostname" -f "$known_hosts" > /dev/null 2>&1
+            done
         fi
+        _log "Add the fingerprint of $GREEN$host$WHITE to $BLUE$known_hosts$WHITE"
         # Iterate over both ip and hostname
         for hostname in $(getent -s ldap hosts | grep "$host"); do
-            # Remove old fingerprints and add a new one
-            ssh-keygen -R "$hostname" -f "$known_hosts" > /dev/null 2>&1
             ssh-keyscan -t ecdsa-sha2-nistp256 "$hostname" >> "$known_hosts"
         done
     done
@@ -256,7 +267,7 @@ _add_user_to_group() {
 _postpone_daemon_after_mount() {
     local daemon=$1
     local dir=$2
-    if ! _is_server; then
+    if ! _is_master; then
         _append "/etc/systemd/system/$daemon.service.d/override.conf" \
             "[Unit]" \
             "After=network.target network-online.target autofs.service" \
