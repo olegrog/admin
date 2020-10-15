@@ -22,7 +22,8 @@ for arg; do case $arg in
 esac; done
 
 [[ ${#name[@]} -eq 2 ]] || { echo "Provide both first and last names."; print_help; }
-[[ $EUID -eq 0 ]] || { echo "Run with sudo."; exit 1; }
+[[ $EUID -eq 0 ]] || _err "Run with sudo"
+_is_master || _err "Run from the master host"
 
 read -r first_name last_name <<< "${name[@]}"
 # Make all letters lowercase
@@ -40,8 +41,9 @@ firstuid=$(getent -s ldap passwd | head -1 | awk -F: '{ print $3 }')
 
 check_host_reachability() {
     local err
-    # Iterate over all hosts registered in LDAP, but not in /etc/hosts
+    _log "Check accessibility of all hosts"
     for host in $(_get_hosts); do
+        [[ "$(hostname)" == "$host" ]] && continue
         printf ' -- Check if %s is reachable...' "$host"
         # Check whether SSH port is open
         if nc -z -w 2 "$host" 22; then
@@ -51,7 +53,7 @@ check_host_reachability() {
             err=1
         fi
     done
-    [[ -z $err ]] || exit 1
+    [[ -z $err ]] || _err "Some of hosts are not reachable"
 }
 
 register_user() {
@@ -80,11 +82,7 @@ register_user() {
     /usr/share/migrationtools/migrate_passwd.pl <(grep "$user" /etc/passwd) \
         | ldapadd -x -D "cn=admin,$LDAP_BASE" -y /etc/ldap.secret
     userdel -f "$user"
-    for host in $(_get_hosts); do
-        [[ "$(hostname)" == "$host" ]] && continue
-        _log "Restart AutoFS at $host"
-        ssh "$host" systemctl restart autofs
-    done
+    _restart_daemon_on_slave_hosts autofs
 }
 
 configure_ssh_directory() {
@@ -113,7 +111,7 @@ generate_additional_files() {
 }
 
 create_local_home() {
-    local dir="/home-local/$user"
+    local dir="$LOCAL_HOME/$user"
     for host in $(_get_hosts); do
         [[ "$(hostname)" == "$host" ]] && continue
         _log "Make directory $BLUE$dir$WHITE at $GREEN$host$WHITE"

@@ -1,14 +1,14 @@
 #!/bin/bash -e
 
-[[ $# -eq 0 ]] || { echo "Usage: ./$(basename "$0")"; exit 1; }
-[[ $EUID -eq 0 ]] || { echo "Run with sudo."; exit 1; }
-
 # shellcheck source=./common.sh
 source "$(dirname "$0")/common.sh"
 
+[[ $# -eq 0 ]] || { echo "Usage: ./$(basename "$0")"; exit 1; }
+[[ $EUID -eq 0 ]] || _err "Run with sudo"
+
 if [[ -t 1 ]]; then
     # We are in the interactive mode
-    if _is_server; then
+    if _is_master; then
         if _ask_user "update software on all hosts"; then
             for host in $(_get_hosts); do
                 [[ "$(hostname)" == "$host" ]] && continue

@@ -6,11 +6,13 @@ Set user quotas in their home directory.
 
 Usage: ./$(basename "$0") [<options>]
 Options:
-  --soft=<size>           Set a soft user limit.
-  --hard=<size>           Set a hard user limit.
-  --group=<group>         Set quotes for users that belong to this group.
-  --user=<user>           Set quota for specified user only
-  --help                  Print this help.
+  --soft=<size>           Set a soft user limit
+  --hard=<size>           Set a hard user limit
+  --group=<group>         Set a quota for all users that belong to this group
+  --user=<user>           Set a quota for the specified user only
+  --dump                  Dump all quotes instead
+  --yes                   Automatic yes to prompts
+  --help                  Print this help
 EOF
     exit 1;
 }
@@ -29,13 +31,13 @@ for arg; do case $arg in
     -h=*|--hard=*)      hard="${arg#*=}";;
     -g=*|--group=*)     group="${arg#*=}";;
     -u=*|--user=*)      user="${arg#*=}";;
-    -p|--print)         repquota -s "$dir"; exit;;
+    -d|--dump)          repquota -s "$dir"; exit;;
     -y|--yes)           yes=1;;
     -*)                 echo "Unknown option '$arg'."; print_help;;
     *)                  echo "Unknown argument '$arg'."; print_help;;
 esac; done
 
-_is_server || _err "Run from the server"
+_is_master || _err "Run from the master host"
 [[ $EUID -eq 0 ]] || _err "Run with sudo"
 
 if [[ "$user" ]]; then

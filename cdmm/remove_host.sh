@@ -1,12 +1,13 @@
 #!/bin/bash -e
 
-[[ $# -eq 1 ]] || { echo "Usage: ./$(basename "$0") <host>"; exit 1; }
-[[ $EUID -eq 0 ]] || { echo "Run with sudo."; exit 1; }
-
-host=$1
-
 # shellcheck source=./common.sh
 source "$(dirname "$0")/common.sh"
+
+[[ $# -eq 1 ]] || { echo "Usage: ./$(basename "$0") <host>"; exit 1; }
+[[ $EUID -eq 0 ]] || _err "Run with sudo"
+_is_master || _err "Run from the master host"
+
+host=$1
 
 if _ask_user "remove $host"; then
     slurm="$CONFIG/etc/slurm-llnl/slurm.conf"

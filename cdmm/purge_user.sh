@@ -1,12 +1,13 @@
 #!/bin/bash
 
-[[ $# -eq 1 ]] || { echo "Usage: ./$(basename "$0") <user>"; exit 1; }
-[[ $EUID -eq 0 ]] || { echo "Run with sudo."; exit 1; }
-
-user=$1
-
 # shellcheck source=./common.sh
 source "$(dirname "$0")/common.sh"
+
+[[ $# -eq 1 ]] || { echo "Usage: ./$(basename "$0") <user>"; exit 1; }
+[[ $EUID -eq 0 ]] || _err "Run with sudo"
+_is_master || _err "Run from the master host"
+
+user=$1
 
 getent passwd | grep "$user" || _warn "User $GREEN$user$RED is not registered"
 
