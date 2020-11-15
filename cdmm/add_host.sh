@@ -6,10 +6,11 @@ source "$(dirname "$0")/common.sh"
 [[ $# -eq 2 ]] || { echo "Usage: ./$(basename "$0") <host> <ip>"; exit 1; }
 [[ $EUID -eq 0 ]] || _err "Run with sudo"
 _is_master || _err "Run from the master host"
-nc -z -w 2 "$ip" 22 || _err "Host $ip is not reachable"
 
 host=$1
 ip=$2
+
+nc -z -w 2 "$ip" 22 || _err "Host $ip is not reachable"
 
 add_ldap_record() {
     _log "Add an LDAP record"
