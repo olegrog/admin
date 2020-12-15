@@ -140,13 +140,25 @@ configure_slurm() {
     _add_cron "@reboot /usr/bin/scontrol update nodename=$(hostname) state=resume"
 }
 
+install_drivers() {
+    _topic "Install drivers"
+    local nvidia_installed_version nvidia_best_version
+
+    nvidia_installed_version=$(dpkg-query --list "nvidia-driver-*" 2>/dev/null \
+        | grep "ii" | grep -oE "nvidia-driver-[0-9]{3}" | grep -o '[0-9]*')
+
+    if [ -z "$nvidia_installed_version" ]; then
+        nvidia_best_version=$(apt-cache search nvidia-driver \
+            | grep -oE "nvidia-driver-[0-9]{3}" | grep -o '[0-9]*' | sort | tail -1)
+        _install "nvidia-driver-$nvidia_best_version"
+    else
+        _install "nvidia-driver-$nvidia_installed_version"
+    fi
+    nvidia-smi | grep NVIDIA || _warn "NVidia driver is not used. Try to reboot"
+}
+
 install_software() {
-    local nvidia_best_version
-    nvidia_best_version=$(apt-cache search nvidia \
-        | grep -oE "nvidia-[0-9]{1,3}" | grep -o '[0-9]*' | sort | tail -1)
-    _topic "Install additional software"
-    _install --collection=Drivers \
-        "nvidia-driver-$nvidia_best_version"
+    _topic "Install software"
     _install --collection=Auxiliary \
         ack ripgrep vim ranger tcl kdiff3 meld mlocate tldr tmux
     _install --collection=Repository \
@@ -167,7 +179,7 @@ install_software() {
     _copy /etc/ganglia/gmond.conf
     [[ $_modified ]] && _restart_daemon ganglia-monitor
     _install --collection=Compilers \
-        g++ gfortran clang clang-tidy clang-format clang-tools
+        g++ gfortran clang clang-tidy clang-format clang-tools cabal-install
     _install --collection=Development \
         valgrind git subversion cmake flex build-essential doxygen pax-utils
     _install --collection=Multimedia \
@@ -218,6 +230,7 @@ install_software_on_master_host() {
 
 # For software installed to /opt from deb packages
 install_proprietary_software() {
+    _topic "Install proprietary software"
     # Old way:
     #_append /etc/apt/sources.list.d/teamviewer.list \
     #    "deb http://linux.teamviewer.com/deb stable main"
@@ -273,6 +286,7 @@ if ! _is_master; then
 fi
 configure_virtual_memory
 configure_environment_modules
+install_drivers
 install_software
 install_proprietary_software
 activate_opt_software
