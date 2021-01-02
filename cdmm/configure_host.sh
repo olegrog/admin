@@ -190,6 +190,12 @@ install_software() {
         libboost-all-dev libblas-dev liblapack-dev zlib1g-dev trilinos-all-dev
     _install --collection="CUDA libraries" \
         nvidia-cuda-toolkit nvidia-cuda-gdb
+    _install --collection=Octave \
+        octave octave-bim octave-data-smoothing octave-divand octave-doc octave-fpl octave-general \
+        octave-geometry octave-interval octave-io octave-level-set octave-linear-algebra \
+        octave-miscellaneous octave-missing-functions octave-msh octave-nlopt octave-nurbs \
+        octave-optiminterp octave-parallel octave-specfun octave-splines octave-strings \
+        octave-struct octave-symbolic octave-tsa
     _install --collection=Python \
         python3-pip python3-numpy python3-scipy python3-sympy python3-matplotlib pylint \
         python3-mpi4py python3-numba python3-keras jupyter
