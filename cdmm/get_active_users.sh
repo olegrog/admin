@@ -3,7 +3,7 @@
 # shellcheck source=./common.sh
 source "$(dirname "$0")/common.sh"
 
-echo; _topic "Users with high CPU load"
+_topic "Users with high CPU load"
 
 pdsh ps -eo pcpu,user:20,args \
     | awk '{ if ($2 > 25) { if (h != $1) print "'"$GREEN"'"$1"'"$NC"'"; h=$1; $1=""; print }}'

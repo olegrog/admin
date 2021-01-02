@@ -39,23 +39,6 @@ firstuid=$(getent -s ldap passwd | head -1 | awk -F: '{ print $3 }')
 [[ -f $pubkey ]] || _err "File $pubkey is not found"
 [[ -f $face ]] || _warn "File $face is not found"
 
-check_host_reachability() {
-    local err
-    _log "Check accessibility of all hosts"
-    for host in $(_get_hosts); do
-        [[ "$(hostname)" == "$host" ]] && continue
-        printf ' -- Check if %s is reachable...' "$host"
-        # Check whether SSH port is open
-        if nc -z -w 2 "$host" 22; then
-            echo yes
-        else
-            echo no
-            err=1
-        fi
-    done
-    [[ -z $err ]] || _err "Some of hosts are not reachable"
-}
-
 register_user() {
     if getent passwd | grep -q "$user"; then
         _warn "User $YELLOW$user$RED already exists"
@@ -121,7 +104,7 @@ create_local_home() {
 }
 
 if _ask_user "add ${first_name^} ${last_name^} as user $user"; then
-    check_host_reachability # we need it to capture fingerprint of all SSH servers
+    _check_host_reachability # we need it to capture fingerprint of all SSH servers
     register_user
     configure_ssh_directory
     generate_additional_files
