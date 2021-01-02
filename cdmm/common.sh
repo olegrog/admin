@@ -255,6 +255,23 @@ _update_ssh_known_hosts() {
     chown "$user":"$(id -g "$user")" "$known_hosts"
 }
 
+_check_host_reachability() {
+    local err
+    _log "Check accessibility of all hosts"
+    for host in $(_get_hosts); do
+        [[ "$(hostname)" == "$host" ]] && continue
+        printf ' -- Check if %s is reachable...' "$host"
+        # Check whether SSH port is open
+        if nc -z -w 2 "$host" 22; then
+            echo yes
+        else
+            echo no
+            err=1
+        fi
+    done
+    [[ -z $err ]] || _err "Some of hosts are not reachable"
+}
+
 _add_user_to_group() {
     local user=$1
     local group=$2

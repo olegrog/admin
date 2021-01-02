@@ -26,6 +26,9 @@ hard=400G
 group="$GROUP"
 dir=/home
 
+_is_master || _err "Run from the master host"
+[[ $EUID -eq 0 ]] || _err "Run with sudo"
+
 for arg; do case $arg in
     -s=*|--soft=*)      soft="${arg#*=}";;
     -h=*|--hard=*)      hard="${arg#*=}";;
@@ -36,9 +39,6 @@ for arg; do case $arg in
     -*)                 echo "Unknown option '$arg'."; print_help;;
     *)                  echo "Unknown argument '$arg'."; print_help;;
 esac; done
-
-_is_master || _err "Run from the master host"
-[[ $EUID -eq 0 ]] || _err "Run with sudo"
 
 if [[ "$user" ]]; then
     users="$user"
