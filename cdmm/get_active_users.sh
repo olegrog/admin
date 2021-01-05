@@ -5,8 +5,9 @@ source "$(dirname "$0")/common.sh"
 
 _topic "Users with high CPU load"
 
-pdsh ps -eo pcpu,user:20,args \
-    | awk '{ if ($2 > 25) { if (h != $1) print "'"$GREEN"'"$1"'"$NC"'"; h=$1; $1=""; print }}'
+ps -o pcpu,pmem,user:15,comm:33,etime,state k -pcpu | head -1 # print a header only
+pdsh ps -eo pcpu,pmem,user:15,comm:33,etime,state k -pcpu \
+    | awk '{ if ($2 > 25) { if (h != $1) print "'"$GREEN"'"$1"'"$NC"'"; h=$1; gsub(/[a-z]*: /, ""); print }}'
 
 echo; _topic "Last login"
 
