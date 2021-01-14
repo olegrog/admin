@@ -142,17 +142,19 @@ configure_slurm() {
 
 install_drivers() {
     _topic "Install drivers"
-    local nvidia_installed_version nvidia_best_version
+    local nvidia_installed_versions nvidia_best_version
 
-    nvidia_installed_version=$(dpkg-query --list "nvidia-driver-*" 2>/dev/null \
-        | grep "ii" | grep -oE "nvidia-driver-[0-9]{3}" | grep -o '[0-9]*')
+    nvidia_installed_versions=$(dpkg-query --list "nvidia-driver-*" 2>/dev/null \
+        | grep "ii" | grep -oE -m1 "nvidia-driver-[0-9]{3}" | grep -o '[0-9]*')
 
-    if [ -z "$nvidia_installed_version" ]; then
+    if [ -z "$nvidia_installed_versions" ]; then
         nvidia_best_version=$(apt-cache search nvidia-driver \
             | grep -oE "nvidia-driver-[0-9]{3}" | grep -o '[0-9]*' | sort | tail -1)
         _install "nvidia-driver-$nvidia_best_version"
     else
-        _install "nvidia-driver-$nvidia_installed_version"
+        for version in $nvidia_installed_versions; do
+            _install "nvidia-driver-$version"
+        done
     fi
     nvidia-smi | grep NVIDIA || _warn "NVidia driver is not used. Try to reboot"
 }
