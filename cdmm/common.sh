@@ -14,6 +14,7 @@ declare -xr NC='\033[0m'
 declare -xr SERVER=10.16.74.203
 declare -xr LDAP_BASE="dc=cdmm,dc=skoltech,dc=ru"
 declare -xr HEADER="# CDMM cluster"
+declare -xr DOMAIN_NAME="skoltech.ru"
 declare -xr ADMIN=o.rogozin
 declare -xr GROUP=cdmm
 declare -xr CONFIG=/opt/_config
