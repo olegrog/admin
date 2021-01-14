@@ -48,7 +48,7 @@ _install() {
         --snap) status_cmd() { snap list "$1"; }
                 install_cmd() { snap install --classic "$1"; }
                 ;;
-        --pip)  status_cmd() { python3 -c "import $1" 2> /dev/null; }
+        --pip)  status_cmd() { python3 -c "import ${1//-/_}" 2> /dev/null; }
                 install_cmd() { pip3 install "$1"; }
                 ;;
         *) packages+=("$arg");;

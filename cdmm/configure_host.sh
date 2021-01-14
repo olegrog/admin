@@ -206,7 +206,7 @@ install_software() {
         python3-mpi4py python3-numba python3-keras jupyter
     [[ $_installed_now ]] && pip3 install --upgrade pip numpy scipy sympy matplotlib pylint \
         mpi4py numba keras
-    _install --pip tensorflow
+    _install --pip tensorflow telegram-send
     _install --collection=MPI \
         openmpi-common openmpi-bin libopenmpi-dev
     _install --collection="for Basilisk" \
