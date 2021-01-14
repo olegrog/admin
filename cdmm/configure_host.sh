@@ -169,8 +169,11 @@ install_software() {
     _install --collection="Remote desktop" \
         xrdp tigervnc-standalone-server xfce4-session
     _add_user_to_group xrdp ssl-cert
+    # Preconfigure postfix used by mail
+    debconf-set-selections <<< "postfix postfix/main_mailer_type string 'Internet Site'"
+    debconf-set-selections <<< "postfix postfix/mailname string $(hostname).$DOMAIN_NAME"
     _install --collection=Diagnostic \
-        htop pdsh clusterssh ganglia-monitor ncdu nmap mesa-utils
+        htop pdsh clusterssh ganglia-monitor ncdu nmap mesa-utils mailutils
     # Configure pdsh
     _append /etc/profile.d/pdsh.sh "export PDSH_RCMD_TYPE=ssh"
     _append /etc/profile.d/pdsh.sh "export WCOLL=$CONFIG/hosts"
