@@ -37,6 +37,7 @@ _check_if_dir_exists() { [[ -d "$1" ]] || _err "Directory $BLUE$1$RED is absent"
 
 _install() {
     unset _installed_now
+    local pip_list
     declare -a packages not_installed
     status_cmd() { dpkg -s "$1" | grep -Eq 'Status.*installed'; }
     install_cmd() { apt-get install -y "$1"; }
@@ -48,8 +49,10 @@ _install() {
         --snap) status_cmd() { snap list "$1"; }
                 install_cmd() { snap install --classic "$1"; }
                 ;;
-        --pip)  status_cmd() { python3 -c "import ${1//-/_}" 2> /dev/null; }
+        # flag -i used since some libraries are capitalized
+        --pip)  status_cmd() { grep -qi "$1==" <<< "$pip_list";  }
                 install_cmd() { pip3 install "$1"; }
+                pip_list=$(pip3 freeze)
                 ;;
         *) packages+=("$arg");;
     esac; done

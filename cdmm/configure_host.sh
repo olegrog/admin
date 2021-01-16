@@ -192,7 +192,7 @@ install_software() {
     _install --collection=Visualization \
         gnuplot paraview gmsh
     _install --collection="C++ libraries" \
-        libboost-all-dev libblas-dev liblapack-dev zlib1g-dev trilinos-all-dev
+        libboost-all-dev libblas-dev liblapack-dev zlib1g-dev trilinos-all-dev libvtk6-dev
     _install --collection="CUDA libraries" \
         nvidia-cuda-toolkit nvidia-cuda-gdb
     _install --collection=Octave \
@@ -202,11 +202,9 @@ install_software() {
         octave-optiminterp octave-parallel octave-specfun octave-splines octave-strings \
         octave-struct octave-symbolic octave-tsa
     _install --collection=Python \
-        python3-pip python3-numpy python3-scipy python3-sympy python3-matplotlib pylint \
-        python3-mpi4py python3-numba python3-keras jupyter
-    [[ $_installed_now ]] && pip3 install --upgrade pip numpy scipy sympy matplotlib pylint \
-        mpi4py numba keras
-    _install --pip tensorflow telegram-send
+        python3 python3-pip jupyter
+    _install --collection="Python libraries" --pip \
+        numpy scipy sympy matplotlib sklearn numba pylint mpi4py keras tensorflow telegram-send
     _install --collection=MPI \
         openmpi-common openmpi-bin libopenmpi-dev
     _install --collection="for Basilisk" \
