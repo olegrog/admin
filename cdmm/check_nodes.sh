@@ -3,7 +3,7 @@
 # shellcheck source=./common.sh
 source "$(dirname "$0")/common.sh"
 
-[ -z $WCOLL ] && _err "Run with sudo -E"
+[ -z "$WCOLL" ] && _err "Run with sudo -E"
 
 check_ganglia() {
     _log "Check Ganglia monitors"
