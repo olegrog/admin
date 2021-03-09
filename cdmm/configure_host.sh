@@ -253,6 +253,15 @@ install_proprietary_software() {
     _install --use-opt --deb-from-distrib google-chrome-stable_current_amd64.deb
     _install --use-opt --deb-from-distrib "teamviewer_*_amd64.deb"
     _postpone_daemon_after_mount teamviewerd /opt/teamviewer
+
+    # AnyDesk
+    _append /etc/apt/sources.list.d/anydesk-stable.list \
+        "deb http://deb.anydesk.com/ all main"
+    if [[ $_modified ]]; then
+        wget -qO - https://keys.anydesk.com/repos/DEB-GPG-KEY | apt-key add -
+        apt-get update
+    fi
+    _install anydesk
 }
 
 activate_opt_software() {
