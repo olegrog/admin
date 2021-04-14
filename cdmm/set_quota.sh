@@ -48,16 +48,21 @@ else
     users=$(_get_users)
 fi
 
+if [[ $(numfmt --from=iec "$soft") -gt $(numfmt --from=iec "$hard") ]]; then
+    _err "The soft limit should be larger than the hard one"
+fi
+
 if [[ ! $yes ]]; then
     _ask_user "set quota $soft/$hard for $user?" || exit
 fi
 
 _install quota
-[ -f "$dir/aquota.user" ] || sudo quotacheck -um "$dir"
-[[ $(quotaon -pu /home | awk '{ print $NF }') == on ]] || quotaon -v "$dir"
+[ -f "$dir/aquota.user" ] || quotacheck -um "$dir"
+[[ $(quotaon -pu "$dir" | awk '{ print $NF }') == on ]] || quotaon -v "$dir"
 for user in $users; do
     if groups "$user" | grep -qw "$group"; then
         setquota -u "$user" "$soft" "$hard" 0 0 "$dir"
+        _log "Quota for $GREEN$user$NC is changed"
     fi
 done
 repquota -s "$dir"
