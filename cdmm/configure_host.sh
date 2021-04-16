@@ -109,6 +109,16 @@ configure_local_home() {
     done
 }
 
+configure_apt() {
+    _topic "Configure APT"
+    local uu='Unattended-Upgrade'
+    local file='/etc/apt/apt.conf.d/20auto-upgrades'
+    if grep -q "$uu \"1\"" $file; then
+        sed -i "s/$uu \"1\"/$uu \"0\"/" "$file"
+        _log "Auto-upgrade is turned off"
+    fi
+}
+
 configure_virtual_memory() {
     _topic "Configure Virtual Memory behavior"
     # https://remoteshaman.com/unix/common/overcommitting-linux-memory-and-admin-reserve-kbytes
@@ -302,6 +312,7 @@ if ! _is_master; then
     configure_local_home
     configure_slurm
 fi
+configure_apt
 configure_virtual_memory
 configure_environment_modules
 install_drivers
