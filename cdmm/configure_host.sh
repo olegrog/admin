@@ -146,15 +146,14 @@ configure_environment_modules() {
 
 configure_slurm() {
     _topic "Configure Slurm"
-    _install --collection="Slurm" \
-        slurmd slurm-client slurm-wlm-torque
+    _install --collection="Slurm" slurmd slurm-client slurm-wlm-torque
     _copy /etc/munge/munge.key
     [[ $_modified ]] && _restart_daemon munge
     _symlink /etc/slurm-llnl/slurm.conf
     [[ $_modified ]] && { sleep 1; _restart_daemon slurmd; }
     _postpone_daemon_after_mount slurmd $CONFIG
     # TODO(olegrog): we have to resume host manually
-    _add_cron "@reboot /usr/bin/scontrol update nodename=$(hostname) state=resume"
+    _add_cron "@reboot sleep 10 && /usr/bin/scontrol update nodename=$(hostname) state=resume"
 }
 
 install_drivers() {
