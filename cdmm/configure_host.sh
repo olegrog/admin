@@ -119,11 +119,18 @@ configure_apt() {
     fi
 }
 
-configure_virtual_memory() {
-    _topic "Configure Virtual Memory behavior"
+configure_memory_management() {
+    _topic "Configure memory management"
+    # 1. Force OOM killer to do its work without investigation
     # https://remoteshaman.com/unix/common/overcommitting-linux-memory-and-admin-reserve-kbytes
     _append /etc/sysctl.d/60-oom.conf "vm.oom_kill_allocating_task = 1"
     sysctl -w vm.oom_kill_allocating_task=1 > /dev/null
+    # 2. Set memory limits for users
+    _append /etc/systemd/system/user-.slice.d/50-memory.conf \
+        "[Slice]" \
+        "MemoryHigh=$1" \
+        "MemoryMax=$2"
+    [[ ! $_modified ]] || systemctl daemon-reload
 }
 
 configure_environment_modules() {
@@ -187,8 +194,7 @@ install_software() {
     _install --collection=Diagnostic \
         htop pdsh clusterssh ganglia-monitor ncdu nmap mesa-utils mailutils
     # Configure pdsh
-    _append /etc/profile.d/pdsh.sh "export PDSH_RCMD_TYPE=ssh"
-    _append /etc/profile.d/pdsh.sh "export WCOLL=$CONFIG/hosts"
+    _append /etc/profile.d/pdsh.sh "export PDSH_RCMD_TYPE=ssh" "export WCOLL=$CONFIG/hosts"
     _append /etc/bash.bashrc ". /etc/profile.d/pdsh.sh"
     # Configure ganglia-monitor
     _copy /etc/ganglia/gmond.conf
@@ -303,7 +309,10 @@ _block "Configure" "$(hostname)"
 _install --collection="Precursory" \
     colordiff
 
-if ! _is_master; then
+if _is_master; then
+    configure_memory_management '70%' '80%'
+else
+    configure_memory_management '90%' '95%'
     configure_ssh
     configure_ldap
     configure_nfs
@@ -313,7 +322,6 @@ if ! _is_master; then
     configure_slurm
 fi
 configure_apt
-configure_virtual_memory
 configure_environment_modules
 install_drivers
 install_software
