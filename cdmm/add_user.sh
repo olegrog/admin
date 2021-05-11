@@ -17,6 +17,7 @@ group=$GROUP
 
 for arg; do case $arg in
     --group=*)          group="${arg#*=}";;
+    -h|--help)          print_help;;
     -*)                 echo "Unknown option '$arg'."; print_help;;
     *)                  name+=("$arg");;
 esac; done

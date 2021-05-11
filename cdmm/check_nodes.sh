@@ -1,50 +1,101 @@
 #!/bin/bash -e
 
+print_help() {
+    cat << EOF
+Check operability of the nodes.
+
+Usage: ./$(basename "$0") [<options>]
+Options:
+-f|--fix                Try to fix the detected issues
+--help                  Print this help
+EOF
+    exit 1;
+}
+
 # shellcheck source=./common.sh
 source "$(dirname "$0")/common.sh"
 
 [ -z "$WCOLL" ] && _err "Run with sudo -E"
 _is_master || _err "Run from the master host"
 
+for arg; do case $arg in
+    -f|--fix)           fix=1;;
+    -h|--help)          print_help;;
+    -*)                 echo "Unknown option '$arg'."; print_help;;
+    *)                  echo "Unknown argument '$arg'."; print_help;;
+esac; done
+
+find_all_failed_daemons() {
+    _log "Check whether all daemons are running"
+    if pdsh 'systemctl list-units --state=failed' | grep failed; then
+        if [[ $fix ]]; then
+            _log "Trying to reset them"
+            pdsh 'systemctl reset-failed'
+        fi
+    fi
+}
+
+check_drivers() {
+    _log "Check drivers"
+    pdsh 'nvidia-smi > /dev/null || echo "NVidia drivers does not work!"'
+}
+
 check_ganglia() {
-    _log "Check Ganglia monitors"
+    _log "Check ${CYAN}Ganglia monitors$WHITE"
     mapfile -t ghosts < <(gstat -al1 | cut -f1 -d' ')
     for host in $(_get_hosts); do
         if [[ ! " ${ghosts[*]} " == *" $host "* ]]; then
             _warn "Ganglia monitor doesn't work at $GREEN$host$RED"
-            _log "Trying to restart"
-            ssh "$host" systemctl restart ganglia-monitor
+            if [[ $fix ]]; then
+                _log "Trying to restart"
+                ssh "$host" systemctl restart ganglia-monitor
+            fi
         fi
     done
 }
 
 check_slurm() {
-    _log "Check whether nodes are ready for SLURM"
+    _log "Check whether nodes are ready for ${CYAN}SLURM$WHITE"
     for host in $(_get_hosts); do
         if ! sinfo --Node | grep -Fq "$host"; then
             _warn "Host $GREEN$host$RED was out of list"
-            _log "Trying to activate it"
-            ssh "$host" systemctl restart slurmd
-            sinfo --Node | grep "$host"
+            if [[ $fix ]]; then
+                _log "Trying to activate it"
+                ssh "$host" systemctl restart slurmd
+                sinfo --Node | grep "$host"
+            fi
         fi
     done
     for host in $(sinfo --Node | grep down | cut -f1 -d' '); do
         _warn "Host $GREEN$host$RED was down"
-        _log "Trying to wake it"
-        scontrol update nodename="$host" state=idle
-        sinfo --Node | grep "$host"
+        if [[ $fix ]]; then
+            _log "Trying to wake it"
+            scontrol update nodename="$host" state=idle
+            sinfo --Node | grep "$host"
+        fi
+    done
+}
+
+check_daemons() {
+    local hosts
+    for daemon in "$@"; do
+        _log "Check whether $CYAN$daemon$WHITE is active"
+        hosts=$(pdsh "systemctl is-active $daemon" | grep inactive | cut -f1 -d:)
+        if [[ $fix ]]; then
+            for host in $hosts; do
+                _log "Trying to restart $CYAN$daemon$WHITE on $GREEN$host$WHITE"
+                #shellcheck disable=SC2029
+                ssh "$host" systemctl restart "$daemon"
+            done
+        fi
     done
 }
 
 _check_host_reachability
-
-_log "Check drivers"
-pdsh 'nvidia-smi > /dev/null || echo "NVidia drivers does not work!"'
-
-_log "Check whether all daemons are running"
-if pdsh 'systemctl list-units --state=failed' | grep failed; then
-    _warn "Can be fixed by$YELLOW sudo systemctl reset-failed$RED"
-fi
-
+find_all_failed_daemons
+check_drivers
 check_ganglia
 check_slurm
+check_daemons teamviewerd
+
+_topic "All checks have been passed"

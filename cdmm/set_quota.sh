@@ -36,6 +36,7 @@ for arg; do case $arg in
     -u=*|--user=*)      user="${arg#*=}";;
     -d|--dump)          repquota -s "$dir"; exit;;
     -y|--yes)           yes=1;;
+    --help)             print_help;;
     -*)                 echo "Unknown option '$arg'."; print_help;;
     *)                  echo "Unknown argument '$arg'."; print_help;;
 esac; done
