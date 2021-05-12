@@ -144,6 +144,17 @@ configure_environment_modules() {
     _append /etc/bash.bashrc ". /etc/profile.d/lmod.sh"
 }
 
+configure_shell() {
+    _topic "Configure shell"
+    # `bash` is chosen instead of faster `dash` only for Ansys
+    # See https://wiki.ubuntu.com/DashAsBinSh for details
+    if [[ $(ls -la /bin/sh) == *dash* ]]; then
+        _log "Set ${MAGENTA}bash$WHITE as the default system shell"
+        debconf-set-selections <<< "dash dash/sh boolean false"
+        DEBIAN_FRONTEND=noninteractive dpkg-reconfigure dash
+    fi
+}
+
 configure_slurm() {
     _topic "Configure Slurm"
     _install --collection="Slurm" slurmd slurm-client slurm-wlm-torque
@@ -322,6 +333,7 @@ else
 fi
 configure_apt
 configure_environment_modules
+configure_shell
 install_drivers
 install_software
 install_proprietary_software
