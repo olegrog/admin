@@ -190,6 +190,19 @@ _symlink() {
     fi
 }
 
+_set_sysctl_option() {
+    local file="/etc/sysctl.d/$1"
+    local option=$2
+    local value=$3
+    local log=$4
+    if ! grep -q "^$option *= *$value *$" "$file"; then
+        _log "$log"
+        sed -i "s/\(^$option *=.*\)/# \1/g" "$file"
+        _append "$file" "$option = $value"
+        sysctl -w "$option=$value"
+    fi
+}
+
 _ask_user() {
     local request=$1
     read -p "Are you sure to $request (y/N)? " -n 1 -r

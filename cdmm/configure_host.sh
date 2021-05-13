@@ -123,8 +123,8 @@ configure_memory_management() {
     _topic "Configure memory management"
     # 1. Force OOM killer to do its work without investigation
     # https://remoteshaman.com/unix/common/overcommitting-linux-memory-and-admin-reserve-kbytes
-    _append /etc/sysctl.d/60-oom.conf "vm.oom_kill_allocating_task = 1"
-    sysctl -w vm.oom_kill_allocating_task=1 > /dev/null
+    _set_sysctl_option 60-oom.conf vm.oom_kill_allocating_task 1 \
+        "Enable killing the OOM-triggering task in out-of-memory situations"
     # 2. Set memory limits for users
     _append /etc/systemd/system/user-.slice.d/50-memory.conf \
         "[Slice]" \
@@ -152,6 +152,14 @@ configure_shell() {
         _log "Set ${MAGENTA}bash$WHITE as the default system shell"
         debconf-set-selections <<< "dash dash/sh boolean false"
         DEBIAN_FRONTEND=noninteractive dpkg-reconfigure dash
+    fi
+}
+
+configure_mpi() {
+    _topic "Configure MPI"
+    if [[ $(cat /proc/sys/kernel/yama/ptrace_scope) == 1 ]]; then
+        _set_sysctl_option 10-ptrace.conf kernel.yama.ptrace_scope 0 \
+            "Allow ptracing of non-child processes by non-root users"
     fi
 }
 
@@ -334,6 +342,7 @@ fi
 configure_apt
 configure_environment_modules
 configure_shell
+configure_mpi
 install_drivers
 install_software
 install_proprietary_software
