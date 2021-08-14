@@ -210,7 +210,7 @@ install_software() {
     debconf-set-selections <<< "postfix postfix/main_mailer_type string 'Internet Site'"
     debconf-set-selections <<< "postfix postfix/mailname string $(hostname).$DOMAIN_NAME"
     _install --collection=Diagnostic \
-        htop pdsh clusterssh ganglia-monitor ncdu nmap mesa-utils mailutils
+        htop pdsh clusterssh ganglia-monitor ncdu nmap mesa-utils mailutils net-tools
     # Configure pdsh
     _append /etc/profile.d/pdsh.sh "export PDSH_RCMD_TYPE=ssh" "export WCOLL=$CONFIG/hosts"
     _append /etc/bash.bashrc ". /etc/profile.d/pdsh.sh"

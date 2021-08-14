@@ -23,7 +23,7 @@ declare -xr LOCAL_HOME=/home-local
 
 _log() { echo -e "--$WHITE $*.$NC"; }
 _err() { echo -e "--$RED $*.$NC"; exit 1; }
-_warn() { echo -e "--$RED $*.$NC"; }
+_warn() { echo -e "--$RED $*.$NC"; ((++_nwarnings)); }
 _failed() { echo -e "--$RED Failed!$NC"; }
 _topic() { echo -e "===$YELLOW $* $NC"===; }
 _line() { printf '=%.0s' $(seq -7 ${#1}); printf '\n'; }

@@ -58,7 +58,7 @@ check_slurm() {
     _log "Check whether nodes are ready for ${CYAN}SLURM$WHITE"
     for host in $(_get_hosts); do
         if ! sinfo --Node | grep -Fq "$host"; then
-            _warn "Host $GREEN$host$RED was out of list"
+            _warn "Host $GREEN$host$RED is out of list"
             if [[ $fix ]]; then
                 _log "Trying to activate it"
                 ssh "$host" systemctl restart slurmd
@@ -67,7 +67,7 @@ check_slurm() {
         fi
     done
     for host in $(sinfo --Node | grep down | cut -f1 -d' '); do
-        _warn "Host $GREEN$host$RED was down"
+        _warn "Host $GREEN$host$RED is down"
         if [[ $fix ]]; then
             _log "Trying to wake it"
             scontrol update nodename="$host" state=idle
@@ -98,4 +98,8 @@ check_ganglia
 check_slurm
 check_daemons teamviewerd
 
-_topic "All checks have been passed"
+if [[ "$_nwarnings" -gt 0 && ! $fix ]]; then
+    _topic "$_nwarnings check(s) failed. Try to run with -f"
+else
+    _topic "All checks passed"
+fi
