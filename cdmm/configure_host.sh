@@ -197,7 +197,7 @@ install_drivers() {
 install_software() {
     _topic "Install software"
     _install --collection=Auxiliary \
-        ack ripgrep vim ranger tcl kdiff3 meld mlocate tldr tmux
+        ack ripgrep vim ranger tcl kdiff3 meld mlocate tldr tmux at
     _install --collection=Repository \
         aptitude gconf-service software-properties-common snapd
     _install --collection="from Snap" --snap \
@@ -229,6 +229,12 @@ install_software() {
         libboost-all-dev libblas-dev liblapack-dev zlib1g-dev trilinos-all-dev libvtk6-dev
     _install --collection="CUDA libraries" \
         nvidia-cuda-toolkit nvidia-cuda-gdb
+    # Permit profiling for all users
+    _append /etc/modprobe.d/cuda.conf 'options nvidia "NVreg_RestrictProfilingToAdminUsers=0"'
+    if [[ $_modified ]]; then
+        update-initramfs -u
+        _log "Reboot is needed"
+    fi
     _install --collection=Octave \
         octave octave-bim octave-data-smoothing octave-divand octave-doc octave-fpl octave-general \
         octave-geometry octave-interval octave-io octave-level-set octave-linear-algebra \
