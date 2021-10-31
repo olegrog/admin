@@ -164,6 +164,7 @@ _copy() {
     else
         _log "File $BLUE$file$WHITE is copied"
     fi
+    mkdir -p "$(dirname "$file")"
     cp "$src" "$file"
 }
 
@@ -185,6 +186,7 @@ _symlink() {
             _err "File $BLUE$file$WHITE is not a symlink"
         fi
     else
+        mkdir -p "$(dirname "$file")"
         ln -sf "$src" "$file"
         _log "Symlink $BLUE$file$WHITE was created"
     fi

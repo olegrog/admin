@@ -224,7 +224,9 @@ install_software() {
     _install --collection=Multimedia \
         ffmpeg imagemagick smpeg-plaympeg graphviz
     _install --collection=Visualization \
-        gnuplot paraview gmsh
+        gnuplot paraview
+    _install --collection="Scientific libraries" \
+        gmsh hdf5-tools
     _install --collection="C++ libraries" \
         libboost-all-dev libblas-dev liblapack-dev zlib1g-dev trilinos-all-dev libvtk6-dev
     _install --collection="CUDA libraries" \
@@ -267,7 +269,6 @@ install_software_on_master_host() {
 
     mkdir -p $CONFIG/etc/slurm-llnl
     mv /etc/slurm-llnl/slurm.conf $CONFIG/etc/slurm-llnl
-    ln -s $CONFIG/etc/slurm-llnl/slurm.conf /etc/slurm-llnl/
 
     ### Software RAID ###
     local device=/dev/md0
@@ -309,6 +310,13 @@ activate_opt_software() {
     _append /etc/bash.bashrc ". /opt/spack/share/spack/setup-env.sh"
     _copy /usr/share/applications/Mathematica.desktop
     _copy /usr/share/applications/Trello.desktop
+}
+
+fix_system_bugs() {
+    _topic "Fix known unresolved system bugs"
+    # https://unix.stackexchange.com/a/496519/364211
+    _symlink /etc/polkit-1/localauthority/50-local.d/color.pkla
+    [[ $_modified ]] && _restart_daemon polkit
 }
 
 if [[ -t 1 ]]; then
@@ -353,6 +361,7 @@ install_drivers
 install_software
 install_proprietary_software
 activate_opt_software
+fix_system_bugs
 
 _topic "Update database for mlocate"
 updatedb
