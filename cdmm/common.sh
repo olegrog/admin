@@ -96,7 +96,7 @@ _install() {
                 [[ $use_opt ]] && { umount -l /opt; _err "Failed to install $pkg"; }
             fi
         done
-        declare -x _installed_now=1 # indicates if packages have been installed right now
+        _installed_now=1 # indicates if packages have been installed right now
     elif [[ "$collection" ]]; then
         _log "Package collection $MAGENTA$collection$WHITE is already installed"
     fi

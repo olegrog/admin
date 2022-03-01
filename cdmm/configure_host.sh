@@ -172,7 +172,7 @@ configure_slurm() {
     [[ $_modified ]] && { sleep 1; _restart_daemon slurmd; }
     _postpone_daemon_after_mount slurmd $CONFIG
     # TODO(olegrog): we have to resume host manually
-    _add_cron "@reboot sleep 10 && /usr/bin/scontrol update nodename=$(hostname) state=resume"
+    _add_cron "@reboot sleep 100 && /usr/bin/scontrol update nodename=$(hostname) state=resume"
 }
 
 install_drivers() {
@@ -220,7 +220,7 @@ install_software() {
     _install --collection=Compilers \
         g++ gfortran clang clang-tidy clang-format clang-tools cabal-install
     _install --collection=Development \
-        valgrind git subversion cmake flex build-essential doxygen pax-utils
+        valgrind git git-lfs subversion cmake flex build-essential doxygen pax-utils
     _install --collection=Multimedia \
         ffmpeg imagemagick smpeg-plaympeg graphviz
     _install --collection=Visualization \
@@ -255,6 +255,11 @@ install_software() {
         libreadline-dev libncurses5-dev libgmp-dev libmpfr-dev libmpc-dev
     _install --collection="for Firedrake" \
         mercurial bison python3-tk python3-venv liboce-ocaf-dev swig
+    _install --collection="for ANSYS" \
+        csh xfonts-75dpi xfonts-100dpi
+    if [[ $_installed_now ]]; then
+        _restart_daemon gdm
+    fi
 }
 
 # This function is currently not used, but contains details of master host configuration
@@ -316,7 +321,9 @@ fix_system_bugs() {
     _topic "Fix known unresolved system bugs"
     # https://unix.stackexchange.com/a/496519/364211
     _symlink /etc/polkit-1/localauthority/50-local.d/color.pkla
-    [[ $_modified ]] && _restart_daemon polkit
+    if [[ $_modified ]]; then
+        _restart_daemon polkit
+    fi
 }
 
 if [[ -t 1 ]]; then
