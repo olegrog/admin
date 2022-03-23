@@ -254,7 +254,7 @@ install_software() {
     _install --collection="for OpenFOAM" \
         libreadline-dev libncurses5-dev libgmp-dev libmpfr-dev libmpc-dev
     _install --collection="for Firedrake" \
-        mercurial bison python3-tk python3-venv liboce-ocaf-dev swig
+        bison python3-tk python3-venv libopenblas-dev
     _install --collection="for ANSYS" \
         csh xfonts-75dpi xfonts-100dpi
     if [[ $_installed_now ]]; then
