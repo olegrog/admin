@@ -3,11 +3,20 @@
 # shellcheck source=./common.sh
 source "$(dirname "$0")/common.sh"
 
+date
 _topic "Users with high CPU load"
 
-ps -o pcpu,pmem,user:15,comm:33,etime,state k -pcpu | head -1 # print a header only
-pdsh ps -eo pcpu,pmem,user:15,comm:33,etime,state k -pcpu \
-    | awk '{ if ($2 > 25) { if (h != $1) print "'"$GREEN"'"$1"'"$NC"'"; h=$1; gsub(/[a-z]*: /, ""); print }}'
+columns="pcpu,pmem,user:15,comm:33,etime,state"
+ps -o "$columns" k -pcpu | head -1 # print a header only
+pdsh ps --no-headers -eo "$columns" k -pcpu | awk '
+{
+    if ($2 > 25) {
+        if (h != $1) print "'"$GREEN"'"$1"'"$NC"'"
+        h=$1
+        gsub(/[a-z]*: /, "")
+        print
+    }
+}'
 
 echo; _topic "Last login"
 
