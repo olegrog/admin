@@ -249,6 +249,9 @@ install_software() {
         numpy scipy sympy matplotlib sklearn numba pylint mpi4py keras tensorflow telegram-send
     _install --collection=MPI \
         openmpi-common openmpi-bin libopenmpi-dev
+    _install --collection=LaTeX \
+        texlive-latex-extra biber texlive-xetex texlive-luatex cm-super texlive-science dvipng \
+        texlive-extra-utils
     _install --collection="for Basilisk" \
         darcs gifsicle pstoedit swig libpython3-dev libosmesa6-dev libglew-dev
     _install --collection="for OpenFOAM" \
