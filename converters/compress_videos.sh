@@ -68,6 +68,6 @@ for file in "${files[@]}"; do
         -vf "fps=$fps*$accel,setpts=PTS/$accel,scale=iw/$resize:ih/$resize"
     )
     set -x
-    ffmpeg -i "$file" "${options[@]}" "${local_options[@]}" "$out"
+    ffmpeg -i "$file" ${options[@]} "${local_options[@]}" "$out"
     set +x
 done
