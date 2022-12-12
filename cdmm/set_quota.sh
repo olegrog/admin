@@ -35,7 +35,7 @@ for arg; do case $arg in
     -g=*|--group=*)     group="${arg#*=}";;
     -u=*|--user=*)      user="${arg#*=}";;
     -d|--dump)          repquota -s "$dir"; exit;;
-    -y|--yes)           yes=1;;
+    -y|--yes)           _assume_yes=1;;
     -h|--help)          print_help;;
     -*)                 echo "Unknown option '$arg'."; print_help;;
     *)                  echo "Unknown argument '$arg'."; print_help;;
@@ -53,9 +53,7 @@ if [[ $(numfmt --from=iec "$soft") -gt $(numfmt --from=iec "$hard") ]]; then
     _err "The soft limit should be larger than the hard one"
 fi
 
-if [[ ! $yes ]]; then
-    _ask_user "set quota $soft/$hard for $user?" || exit
-fi
+_ask_user "set quota $soft/$hard for $user?" || exit
 
 _install quota
 [ -f "$dir/aquota.user" ] || quotacheck -um "$dir"

@@ -197,11 +197,11 @@ install_drivers() {
 install_software() {
     _topic "Install software"
     _install --collection=Auxiliary \
-        ack ripgrep vim ranger tcl kdiff3 meld mlocate tldr tmux at
+        ack ripgrep vim ranger tcl kdiff3 meld mlocate tldr tmux at pv
     _install --collection=Repository \
         aptitude gconf-service software-properties-common snapd
     _install --collection="from Snap" --snap \
-        atom chromium slack telegram-desktop vlc shellcheck julia julia-mrcinv clion
+        atom chromium slack telegram-desktop vlc shellcheck julia julia-mrcinv clion codium
     _refresh_snap julia-mrcinv edge
     _install --collection="Remote desktop" \
         xrdp tigervnc-standalone-server xfce4-session
@@ -259,7 +259,7 @@ install_software() {
     _install --collection="for Firedrake" \
         bison python3-tk python3-venv libopenblas-dev
     _install --collection="for ANSYS" \
-        csh xfonts-75dpi xfonts-100dpi
+        csh xfonts-75dpi xfonts-100dpi libjpeg62
     if [[ $_installed_now ]]; then
         _restart_daemon gdm
     fi
@@ -296,7 +296,7 @@ install_proprietary_software() {
     #_append /etc/apt/sources.list.d/google-chrome.list \
     #    "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main"
     #if [[ $_modified ]]; then
-    #    wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add -
+    #    curl -s https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add -
     #    apt-get update
     #fi
     _install --use-opt --deb-from-distrib google-chrome-stable_current_amd64.deb
@@ -307,7 +307,7 @@ install_proprietary_software() {
     _append /etc/apt/sources.list.d/anydesk-stable.list \
         "deb http://deb.anydesk.com/ all main"
     if [[ $_modified ]]; then
-        wget -qO - https://keys.anydesk.com/repos/DEB-GPG-KEY | apt-key add -
+        curl -s https://keys.anydesk.com/repos/DEB-GPG-KEY | apt-key add -
         apt-get update
     fi
     _install anydesk

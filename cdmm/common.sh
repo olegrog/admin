@@ -19,6 +19,7 @@ declare -xr ADMIN=o.rogozin
 declare -xr GROUP=cdmm
 declare -xr CONFIG=/opt/_config
 declare -xr DISTRIB=/opt/_distrib
+declare -xr MODULES=/opt/modules
 declare -xr LOCAL_HOME=/home-local
 
 _log() { echo -e "--$WHITE $*.$NC"; }
@@ -207,6 +208,7 @@ _set_sysctl_option() {
 
 _ask_user() {
     local request=$1
+    [[ "$_assume_yes" ]] && return
     read -p "Are you sure to $request (y/N)? " -n 1 -r
     echo
     [[ $REPLY =~ ^[Yy]$ ]]
