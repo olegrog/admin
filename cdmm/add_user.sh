@@ -4,8 +4,8 @@ print_help() {
     cat << EOF
 Usage: ./$(basename "$0") [<options>] <first name> <last name>
 Options:
-  --group=<gid>           Set a primary group.
-  --help                  Print this help.
+  --group=<gid>           Set a primary group
+  --help                  Print this help
 EOF
     exit 1;
 }
@@ -72,7 +72,7 @@ register_user() {
 configure_ssh_directory() {
     _topic "Configure SSH"
     local home; home=$(_get_home "$user")
-    mapfile -t hosts < <(_get_hosts)
+    readarray -t hosts < <(_get_hosts)
     if [[ ! -f $home/.ssh/id_rsa.pub ]]; then
         _log "Generate a local RSA key"
         #shellcheck disable=SC2024

@@ -4,8 +4,8 @@ print_help() {
     cat << EOF
 Usage: ./$(basename "$0") [<options>]
 Options:
-  --threshold=<value>     Show only users with memory usage more than <value> in GB.
-  --help                  Print this help.
+  --threshold=<value>     Show only users with memory usage more than <value> in GB
+  --help                  Print this help
 EOF
     exit 1;
 }
@@ -35,10 +35,10 @@ END {
         else if (sum[host]/total[host] < 0.75) color="'"$YELLOW"'"
         else color="'"$RED"'"
         printf "%s %4.1f/%4.1fG%s\n", "'"$GREEN"'"host color, \
-            sum[host]/'$factor', total[host]/'$factor', "'"$NC"'"
+            sum[host]/'"$factor"', total[host]/'"$factor"', "'"$NC"'"
         for (user in mem[host]) {
-            if (mem[host][user]/'$factor' > '"$threshold"') {
-                printf "%15s %4.1fG\n", user, mem[host][user]/'$factor'
+            if (mem[host][user]/'"$factor"' > '"$threshold"') {
+                printf "%15s %4.1fG\n", user, mem[host][user]/'"$factor"'
             }
         }
     }

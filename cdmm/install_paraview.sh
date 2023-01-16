@@ -5,10 +5,10 @@ print_help() {
 Usage: ./$(basename "$0") [<options>] [version1] [version2] ...
 Install the latest version if list of versions is not specified.
 Options:
-  --force                 Force rewrite files.
-  --list                  List of files versions.
-  --yes                   Automatic yes to prompts.
-  --help                  Print this help.
+  --force                 Force rewrite files
+  --list                  List of files versions
+  --yes                   Automatic yes to prompts
+  --help                  Print this help
 EOF
     exit 1;
 }
@@ -48,7 +48,7 @@ install() {
     local dir="$3"
     local major_version full_version old_version
 
-    major_version="$(echo $version | grep -Eo '[1-9]+\.[0-9]+')"
+    major_version="$(echo "$version" | grep -Eo '[1-9]+\.[0-9]+')"
     full_version="$(get_full_version "$file")"
 
     if [[ -f "$CACHE/$file" && -z "$force" ]]; then
@@ -65,16 +65,16 @@ install() {
         _warn "Module file $BLUE$MODULES_DIR/$full_version$RED already exists"
     else
         _log "Generate file $BLUE$MODULES_DIR/$full_version$WHITE"
-        old_version="$(ls "$MODULES_DIR" | tail -1)"
+        old_version="$(find "$MODULES_DIR" | tail -1)"
         sed "s/$old_version/$full_version/" \
             "$MODULES_DIR/$old_version" > "$MODULES_DIR/$full_version"
     fi
 }
 
-mapfile -t files < <(print_all_versions)
+readarray -t files < <(print_all_versions)
 
-if [[ ! ${versions[@]} ]]; then
-    versions=$(get_short_version ${files[-1]})
+if [[ ! ${versions[*]} ]]; then
+    versions=$(get_short_version "${files[-1]}")
 fi
 
 for version in "${versions[@]}"; do

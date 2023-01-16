@@ -6,8 +6,8 @@ Check operability of the nodes.
 
 Usage: ./$(basename "$0") [<options>]
 Options:
--f|--fix                Try to fix the detected issues
---help                  Print this help
+  --fix                   Try to fix the detected issues
+  --help                  Print this help
 EOF
     exit 1;
 }
@@ -42,7 +42,7 @@ check_drivers() {
 
 check_ganglia() {
     _log "Check ${CYAN}Ganglia monitors$WHITE"
-    mapfile -t ghosts < <(gstat -al1 | cut -f1 -d' ')
+    readarray -t ghosts < <(gstat -al1 | cut -f1 -d' ')
     for host in $(_get_hosts); do
         if [[ ! " ${ghosts[*]} " == *" $host "* ]]; then
             _warn "Ganglia monitor doesn't work at $GREEN$host$RED"
