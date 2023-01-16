@@ -41,7 +41,7 @@ _install() {
     local pip_list
     declare -a packages not_installed
     status_cmd() { dpkg -s "$1" | grep -Eq 'Status.*installed'; }
-    install_cmd() { apt-get install -y "$1"; }
+    install_cmd() { apt-get install -y --no-remove "$1"; }
 
     for arg; do case $arg in
         --collection=*) local collection=${arg#*=};;
@@ -89,7 +89,7 @@ _install() {
                 if [[ $use_opt ]]; then
                     local daemon="$pkg_name"d
                     systemctl is-active -q "$daemon" && systemctl stop "$daemon"
-                    umount -l /opt
+                    umount -l /opt || _err "Failed to umount $BLUE/mnt/opt$RED"
                     _log "Directory $BLUE/mnt/opt$WHITE is umounted"
                     systemctl list-unit-files | grep -q "$daemon" && systemctl start "$daemon"
                 fi

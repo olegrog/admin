@@ -175,29 +175,30 @@ configure_slurm() {
     _add_cron "@reboot sleep 100 && /usr/bin/scontrol update nodename=$(hostname) state=resume"
 }
 
-install_drivers() {
+install_nvidia_drivers() {
     _topic "Install drivers"
-    local nvidia_installed_versions nvidia_best_version
+    local installed_versions best_version
 
-    nvidia_installed_versions=$(dpkg-query --list "nvidia-driver-*" 2>/dev/null \
-        | grep "ii" | grep -oE -m1 "nvidia-driver-[0-9]{3}" | grep -o '[0-9]*')
+    readarray -t installed_versions < <(dpkg-query --list "nvidia-driver-*" 2>/dev/null \
+        | grep "^ii" | grep -oE "nvidia-driver-[0-9]{3}" | cat)
+    best_version="$(apt-cache search nvidia-driver \
+        | grep -oE "nvidia-driver-[0-9]{3}" | sort -V | tail -1)"
 
-    if [ -z "$nvidia_installed_versions" ]; then
-        nvidia_best_version=$(apt-cache search nvidia-driver \
-            | grep -oE "nvidia-driver-[0-9]{3}" | grep -o '[0-9]*' | sort | tail -1)
-        _install "nvidia-driver-$nvidia_best_version"
-    else
-        for version in $nvidia_installed_versions; do
-            _install "nvidia-driver-$version"
+    if [ ${#installed_versions[@]} -eq 0 ]; then
+        _install "$best_version"
+    elif [[ ! " ${installed_versions[*]} " == *" ${best_version} "* ]]; then
+        for version in "${installed_versions[@]}"; do
+            _install "$version"
         done
+        _warn "Available package $MAGENTA$best_version$RED is newer"
     fi
-    nvidia-smi | grep NVIDIA || _warn "NVidia driver is not used. Try to reboot"
+    nvidia-smi || _warn "NVidia driver is not used. Try to reboot"
 }
 
 install_software() {
     _topic "Install software"
     _install --collection=Auxiliary \
-        ack ripgrep vim ranger tcl kdiff3 meld mlocate tldr tmux at pv
+        ack ripgrep vim ranger tcl kdiff3 meld mlocate tldr tmux at pv source-highlight
     _install --collection=Repository \
         aptitude gconf-service software-properties-common snapd
     _install --collection="from Snap" --snap \
@@ -228,7 +229,7 @@ install_software() {
     _install --collection="Scientific libraries" \
         gmsh hdf5-tools
     _install --collection="C++ libraries" \
-        libboost-all-dev libblas-dev liblapack-dev zlib1g-dev trilinos-all-dev libvtk6-dev
+        libboost-all-dev libblas-dev liblapack-dev zlib1g-dev trilinos-all-dev libvtk7-dev
     _install --collection="CUDA libraries" \
         nvidia-cuda-toolkit nvidia-cuda-gdb
     # Permit profiling for all users
@@ -242,7 +243,7 @@ install_software() {
         octave-geometry octave-interval octave-io octave-level-set octave-linear-algebra \
         octave-miscellaneous octave-missing-functions octave-msh octave-nlopt octave-nurbs \
         octave-optiminterp octave-parallel octave-specfun octave-splines octave-strings \
-        octave-struct octave-symbolic octave-tsa
+        octave-struct octave-tsa
     _install --collection=Python \
         python3 python3-pip jupyter
     _install --collection="Python libraries" --pip \
@@ -277,18 +278,40 @@ install_software_on_master_host() {
 
     mkdir -p $CONFIG/etc/slurm-llnl
     mv /etc/slurm-llnl/slurm.conf $CONFIG/etc/slurm-llnl
+    # Run with `-i` after incompatible upgrade: slurmctld -i
 
     ### Software RAID ###
-    local device=/dev/md0
-    local fstype; fstype="$(blkid -o value -s TYPE "$device")"
+    local device=/dev/md0 fstype
     _install mdadm
-    _append /etc/mdadm/mdadm.conf "$(mdadm --detail --scan)"
+
+    # Assemble a pre-existing array
+    mdadm -A --auto=md "$device"
+    # To change config only:
+    #_append /etc/mdadm/mdadm.conf "$(mdadm --detail --scan)"
+    fstype="$(blkid -o value -s TYPE "$device")"
     _append /etc/fstab "$device\t/home\t$fstype\tdefaults,usrquota\t0\t2"
+
+    ### Ganglia monitoring
+    _install gmetad ganglia-webfrontend rrdtool
+    # Bugfix: https://github.com/ganglia/ganglia-web/issues/361
+    # Ganglia-webfrontend 3.7.5 is not compatible with php8+, therefore we install php7.4 from ppa
+    sudo add-apt-repository -y ppa:ondrej/php
+    _install libapache2-mod-php7.4 php7.4-xml
+    a2dismod php*
+    a2enmod php7.4
+    _restart_daemon apache2
+
+    ### LDAP ###
+    # NB: backup is stores in /var/lib/ldap-account-manager/config/
+    _install ldap-account-manager
+    _install php7.4-curl php7.4-gmp php7.4-ldap  php7.4-zip php7.4-mbstring php7.4-gd
 }
 
 # For software installed to /opt from deb packages
 install_proprietary_software() {
     _topic "Install proprietary software"
+
+    ### Teamviewer ###
     # Old way:
     #_append /etc/apt/sources.list.d/teamviewer.list \
     #    "deb http://linux.teamviewer.com/deb stable main"
@@ -299,11 +322,14 @@ install_proprietary_software() {
     #    curl -s https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add -
     #    apt-get update
     #fi
-    _install --use-opt --deb-from-distrib google-chrome-stable_current_amd64.deb
+    # Alternative way (also adds google-chrome.list):
     _install --use-opt --deb-from-distrib "teamviewer_*_amd64.deb"
     _postpone_daemon_after_mount teamviewerd /opt/teamviewer
 
-    # AnyDesk
+    ### Google Chrome ###
+    _install --use-opt --deb-from-distrib google-chrome-stable_current_amd64.deb
+
+    ### AnyDesk ###
     _append /etc/apt/sources.list.d/anydesk-stable.list \
         "deb http://deb.anydesk.com/ all main"
     if [[ $_modified ]]; then
@@ -349,7 +375,7 @@ fi
 _block "Configure" "$(hostname)"
 
 _install --collection="Precursory" \
-    colordiff
+    colordiff curl
 
 if _is_master; then
     configure_memory_management '70%' '80%'
@@ -367,7 +393,7 @@ configure_apt
 configure_environment_modules
 configure_shell
 configure_mpi
-install_drivers
+install_nvidia_drivers
 install_software
 install_proprietary_software
 activate_opt_software
