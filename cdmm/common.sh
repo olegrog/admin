@@ -13,10 +13,10 @@ declare -xr NC='\033[0m'
 # Constants
 declare -xr SERVER=10.16.74.203
 declare -xr LDAP_BASE="dc=cdmm,dc=skoltech,dc=ru"
-declare -xr HEADER="# CDMM cluster"
+declare -xr HEADER="# CMT cluster"
 declare -xr DOMAIN_NAME="skoltech.ru"
 declare -xr ADMIN=o.rogozin
-declare -xr GROUP=cdmm
+declare -xr GROUP=users
 declare -xr CONFIG=/opt/_config
 declare -xr DISTRIB=/opt/_distrib
 declare -xr MODULES=/opt/modules
@@ -94,7 +94,8 @@ _install() {
                     systemctl list-unit-files | grep -q "$daemon" && systemctl start "$daemon"
                 fi
             else
-                [[ $use_opt ]] && { umount -l /opt; _err "Failed to install $pkg"; }
+                [[ $use_opt ]] && umount -l /opt
+                _err "Failed to install $pkg"
             fi
         done
         _installed_now=1 # indicates if packages have been installed right now
@@ -200,7 +201,10 @@ _set_sysctl_option() {
     local log=$4
     if ! grep -q "^$option *= *$value *$" "$file"; then
         _log "$log"
-        sed -i "s/\(^$option *=.*\)/# \1/g" "$file"
+        if [[ -f "$file" ]]; then
+            _warn "Switch off the previous value"
+            sed -i "s/\(^$option *=.*\)/# \1/g" "$file"
+        fi
         _append "$file" "$option = $value"
         sysctl -w "$option=$value"
     fi

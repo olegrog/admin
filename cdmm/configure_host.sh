@@ -168,11 +168,11 @@ configure_slurm() {
     _install --collection="Slurm" slurmd slurm-client slurm-wlm-torque
     _copy /etc/munge/munge.key
     [[ $_modified ]] && _restart_daemon munge
-    _symlink /etc/slurm-llnl/slurm.conf
+    _symlink /etc/slurm/slurm.conf
     [[ $_modified ]] && { sleep 1; _restart_daemon slurmd; }
     _postpone_daemon_after_mount slurmd $CONFIG
     # TODO(olegrog): we have to resume host manually
-    _add_cron "@reboot sleep 100 && /usr/bin/scontrol update nodename=$(hostname) state=resume"
+    _add_cron "@reboot sleep 100 && /usr/bin/scontrol update nodename=$(hostname) state=idle"
 }
 
 install_nvidia_drivers() {
@@ -202,8 +202,8 @@ install_software() {
     _install --collection=Repository \
         aptitude gconf-service software-properties-common snapd
     _install --collection="from Snap" --snap \
-        atom chromium slack telegram-desktop vlc shellcheck julia julia-mrcinv clion codium
-    _refresh_snap julia-mrcinv edge
+        chromium slack telegram-desktop vlc shellcheck julia clion codium firefox
+    _refresh_snap julia edge
     _install --collection="Remote desktop" \
         xrdp tigervnc-standalone-server xfce4-session
     _add_user_to_group xrdp ssl-cert
@@ -211,7 +211,7 @@ install_software() {
     debconf-set-selections <<< "postfix postfix/main_mailer_type string 'Internet Site'"
     debconf-set-selections <<< "postfix postfix/mailname string $(hostname).$DOMAIN_NAME"
     _install --collection=Diagnostic \
-        htop pdsh clusterssh ganglia-monitor ncdu nmap mesa-utils mailutils net-tools
+        htop pdsh clusterssh ganglia-monitor ncdu nmap mesa-utils mailutils net-tools gpustat
     # Configure pdsh
     _append /etc/profile.d/pdsh.sh "export PDSH_RCMD_TYPE=ssh" "export WCOLL=$CONFIG/hosts"
     _append /etc/bash.bashrc ". /etc/profile.d/pdsh.sh"
@@ -223,7 +223,7 @@ install_software() {
     _install --collection=Development \
         valgrind git git-lfs subversion cmake flex build-essential doxygen pax-utils
     _install --collection=Multimedia \
-        ffmpeg imagemagick smpeg-plaympeg graphviz
+        ffmpeg imagemagick smpeg-plaympeg graphviz libcanberra-gtk-module
     _install --collection=Visualization \
         gnuplot paraview
     _install --collection="Scientific libraries" \
@@ -387,8 +387,8 @@ else
     _check_if_dir_exists "$CONFIG"
     configure_admins
     configure_local_home
-    configure_slurm
 fi
+configure_slurm
 configure_apt
 configure_environment_modules
 configure_shell

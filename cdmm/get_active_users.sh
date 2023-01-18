@@ -18,6 +18,9 @@ pdsh ps --no-headers -eo "$columns" k -pcpu | awk '
     }
 }'
 
+echo; _topic "GPU load"
+pdsh gpustat --no-header --color
+
 echo; _topic "Last login"
 
 lastlog_range() {

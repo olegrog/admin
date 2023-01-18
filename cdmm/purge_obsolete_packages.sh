@@ -37,12 +37,14 @@ if [[ -t 1 ]]; then
 fi
 
 purge_packages() {
-    local cmd use_opt=$1
+    local preserve_list=( google-chrome-stable anydesk teamviewer )
 
-    [[ $use_opt ]] && cmd="$(dirname "$0")/umount_opt_and_do.sh"
+    for pkg in "${preserve_list[@]}"; do
+       packages=("${packages[@]/$pkg*}")
+    done
 
     if (( ${#packages[@]} )); then
-        "$cmd" apt-get purge "${options[@]}" "${packages[@]}"
+        apt-get purge "${options[@]}" "${packages[@]}"
     fi
 }
 
@@ -50,13 +52,13 @@ _block "Purge" "$(hostname)"
 _install apt-show-versions
 
 _log "Remove configuration files of the previously deleted packages"
-readarray -t packages < <(dpkg -l |grep "^rc" | awk '{print $2}')
+readarray -t packages < <(dpkg -l | grep "^rc" | awk '{print $2}')
 purge_packages
 
 _log "Remove obsolete packages including manually installed"
 readarray -t packages < <(apt-show-versions | grep 'No available version' | cut -f1 -d' ' \
     | grep -v "$(uname -r)")
-purge_packages use_opt
+purge_packages
 
 _log "Remove suspicious packages newer than version in the repository"
 readarray -t packages < <(apt-show-versions | grep "newer than version" | cut -f1 -d' ')

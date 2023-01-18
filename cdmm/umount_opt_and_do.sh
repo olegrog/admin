@@ -8,6 +8,7 @@ source "$(dirname "$0")/common.sh"
 
 if ! _is_master; then
     _log "Temporary mount $BLUE/mnt/opt$WHITE to $BLUE/opt$WHITE"
+    mkdir -p /mnt/opt
     mount --bind /mnt/opt /opt
 fi
 

@@ -1,6 +1,5 @@
 #!/bin/sh
 
-echo
 gstat --all -1 | awk '
 {
     n = split($0, a, " ", b)
@@ -8,9 +7,10 @@ gstat --all -1 | awk '
 	if (n == 12) a[1] = sprintf("%15s", a[1])
 	if (n == 16) a[1] = sprintf("%-10s", a[1])
     line = b[0]
+    if (n == 16 || a[4] == "Gexec") n--;
     for (i = 1; i <= n; i++)
         line=(line a[i] b[i])
-	if (n == 16) {
+	if (n == 15) {
 		c = a[9]+0
         if (c < a[2]/4) {
             print "\033[1;32m"line"\033[0m"
