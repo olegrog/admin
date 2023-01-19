@@ -19,7 +19,16 @@ pdsh ps --no-headers -eo "$columns" k -pcpu | awk '
 }'
 
 echo; _topic "GPU load"
-pdsh gpustat --no-header --color
+
+pdsh gpustat --no-header --color -P --gpuname-width 20 | awk '
+{
+    n = split($0, a, " ", b)
+    a[1] = sprintf("%-10s", a[1])
+    for (i = 1; i <= n; i++)
+        line=(line a[i] b[i])
+    print line
+    line=""
+}'
 
 echo; _topic "Last login"
 
