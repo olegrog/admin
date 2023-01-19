@@ -305,6 +305,12 @@ install_software_on_master_host() {
     # NB: backup is stores in /var/lib/ldap-account-manager/config/
     _install ldap-account-manager
     _install php7.4-curl php7.4-gmp php7.4-ldap  php7.4-zip php7.4-mbstring php7.4-gd
+    _install migrationtools
+    if [[ $_installed_now ]]; then
+        _append /etc/migrationtools/migrate_common.ph "$DEFAULT_BASE = \"$LDAP_BASE\";" \
+            "$IGNORE_UID_BELOW = 1000;" "$IGNORE_GID_BELOW = 1000;"
+    fi
+    delgroup $GROUP || _log "There is no unix group $CYAN$GROUP$NC"
 }
 
 # For software installed to /opt from deb packages

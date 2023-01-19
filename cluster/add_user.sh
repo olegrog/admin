@@ -16,7 +16,7 @@ source "$(dirname "$0")/common.sh"
 group=$GROUP
 
 for arg; do case $arg in
-    --group=*)          group="${arg#*=}";;
+    -g=*|--group=*)     group="${arg#*=}";;
     -h|--help)          print_help;;
     -*)                 echo "Unknown option '$arg'."; print_help;;
     *)                  name+=("$arg");;
@@ -26,19 +26,29 @@ esac; done
 [[ $EUID -eq 0 ]] || _err "Run with sudo"
 _is_master || _err "Run from the master host"
 
+# Check group
+getent group | grep -qE "^$group:" || _err "Group $CYAN$group$RED does not exist"
+gid=$(getent group | grep -E "^$group:" | awk -F: '{ print $3 }')
+firstgid=$(getent -s ldap group | cut -d: -f3 | sort -n | head -1)
+[[ "$gid" -ge "$firstgid"  ]] || _err "Group $CYAN$group$RED is not from LDAP"
+
 read -r first_name last_name <<< "${name[@]}"
 # Make all letters lowercase
-first_name=${1,,}
-last_name=${2,,}
+first_name=${first_name,,}
+last_name=${last_name,,}
+
 # Use format "n.lastname"
 user="${first_name::1}.$last_name"
 # Public key should be placed in this file
 pubkey="$(dirname "$0")/public_keys/$user.pem"
 face="$(dirname "$0")/faces/$user.jpg"
-firstuid=$(getent -s ldap passwd | head -1 | awk -F: '{ print $3 }')
+firstuid=$(getent -s ldap passwd | cut -d: -f3 | sort -n | head -1)
 
-[[ -f $pubkey ]] || _err "File $pubkey is not found"
-[[ -f $face ]] || _warn "File $face is not found"
+[[ -f $pubkey ]] || _err "File $BLUE$pubkey$RED is not found"
+if [[ ! -f $face ]]; then
+    _warn "File $BLUE$face$RED is not found"
+    _ask_user "create a user without avatar" || exit
+fi
 
 register_user() {
     if getent passwd | grep -q "$user"; then
@@ -64,7 +74,7 @@ register_user() {
     passwd -e "$user"
     _log "Migrate the UNIX user to LDAP"
     /usr/share/migrationtools/migrate_passwd.pl <(grep "$user" /etc/passwd) \
-        | ldapadd -x -D "cn=admin,$LDAP_BASE" -y /etc/ldap.secret
+        | ldapadd -v -x -D "cn=admin,$LDAP_BASE" -y /etc/ldap.secret
     userdel -f "$user"
     _restart_daemon_on_slave_hosts autofs
 }

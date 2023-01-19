@@ -23,7 +23,7 @@ declare -xr MODULES=/opt/modules
 declare -xr LOCAL_HOME=/home-local
 
 _log() { echo -e "--$WHITE $*.$NC"; }
-_err() { echo -e "--$RED $*.$NC"; exit 1; }
+_err() { echo -e "$RED$*!$NC"; exit 1; }
 _warn() { echo -e "--$RED $*.$NC"; ((++_nwarnings)); }
 _failed() { echo -e "--$RED Failed!$NC"; }
 _topic() { echo -e "===$YELLOW $* $NC"===; }
@@ -301,7 +301,7 @@ _add_user_to_group() {
     local user=$1
     local group=$2
     if ! id -nG "$user" | grep -Fq "$group"; then
-        _log "Add user $CYAN$user$WHITE to group $CYAN$group$WHITE"
+        _log "Add user $GREEN$user$WHITE to group $CYAN$group$WHITE"
         adduser "$user" "$group"
     fi
 }
