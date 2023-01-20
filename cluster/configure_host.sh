@@ -51,8 +51,8 @@ EOF
     fi
 }
 
-configure_nfs() {
-    _topic "Configure NFS and autofs"
+configure_autofs() {
+    _topic "Configure autofs over NFS"
     local nfs_mounts=(opt home)
     _install nfs-common autofs
     for dir in "${nfs_mounts[@]}"; do
@@ -389,9 +389,11 @@ if _is_master; then
     configure_memory_management '70%' '80%'
 else
     configure_memory_management '90%' '95%'
-    configure_ssh
-    configure_ldap
-    configure_nfs
+fi
+configure_ssh
+configure_ldap
+if ! _is_master; then
+    configure_autofs
     _check_if_dir_exists "$CONFIG"
     configure_admins
     configure_local_home

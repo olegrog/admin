@@ -95,7 +95,7 @@ _install() {
                 fi
             else
                 [[ $use_opt ]] && umount -l /opt
-                _err "Failed to install $pkg"
+                _err "Failed to install $MAGENTA$pkg$RED"
             fi
         done
         _installed_now=1 # indicates if packages have been installed right now
