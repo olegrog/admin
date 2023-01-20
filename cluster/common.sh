@@ -104,6 +104,15 @@ _install() {
     fi
 }
 
+_purge() {
+    local package=$1
+    local goal=$2
+    if dpkg -s "$package" | grep -Eq 'Status.*installed'; then
+        _log "Purge $MAGENTA$pkg_name$WHITE to $goal"
+        apt-get purge -y "$package"
+    fi
+}
+
 _refresh_snap() {
     local package=$1
     local channel=$2
@@ -138,7 +147,7 @@ _append() {
     _last_appended_file="$file"  # global variable
 }
 
-_purge() {
+_remove_line() {
     local file=$1
     local pattern=$2
     local tmp

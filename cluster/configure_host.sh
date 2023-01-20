@@ -27,11 +27,13 @@ nslcd	        nslcd/ldap-uris	string	ldap://$SERVER
 libnss-ldapd    libnss-ldapd/nsswitch   multiselect passwd, group, shadow, hosts
 EOF
     _install libnss-ldapd
-    if ! grep -q "hosts: *files ldap" /etc/nsswitch.conf; then
+    if ! grep -q "hosts: *files *ldap" /etc/nsswitch.conf; then
         _log "Set LDAP priority higher than DNS for host NSS"
         sed -i 's/^hosts:\( *\)files \(.*\) ldap$/hosts:\1files ldap \2/' /etc/nsswitch.conf
         _is_modified=1
     fi
+    _install libpam-ldapd
+    _purge libpam-sss "use LDAP authentication directly"
     if grep -q "use_authtok" /etc/pam.d/common-*; then
         _log "Update ${CYAN}PAM$WHITE rules"
         # Prevent UNIX authentication when password is changing
