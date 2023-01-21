@@ -96,7 +96,7 @@ find_all_failed_daemons
 check_drivers
 check_ganglia
 check_slurm
-check_daemons teamviewerd
+check_daemons teamviewerd anydesk
 
 if [[ "$_nwarnings" -gt 0 && ! $fix ]]; then
     _topic "$_nwarnings check(s) failed. Try to run with -f"

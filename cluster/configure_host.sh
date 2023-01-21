@@ -232,8 +232,10 @@ install_software() {
         gmsh hdf5-tools
     _install --collection="C++ libraries" \
         libboost-all-dev libblas-dev liblapack-dev zlib1g-dev trilinos-all-dev libvtk7-dev
+    debconf-set-selections <<< "nvidia-cudnn nvidia-cudnn/question select I Agree"
+    debconf-set-selections <<< "nvidia-cudnn nvidia-cudnn/license note"
     _install --collection="CUDA libraries" \
-        nvidia-cuda-toolkit nvidia-cuda-gdb
+        nvidia-cuda-toolkit nvidia-cuda-gdb nvidia-cudnn
     # Permit profiling for all users
     _append /etc/modprobe.d/cuda.conf 'options nvidia "NVreg_RestrictProfilingToAdminUsers=0"'
     if [[ $_modified ]]; then
