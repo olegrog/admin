@@ -36,12 +36,12 @@ find_all_failed_daemons() {
 }
 
 check_drivers() {
-    _log "Check drivers"
+    _log "Check ${CYAN}NVidia$WHITE drivers"
     pdsh 'nvidia-smi > /dev/null || echo "NVidia drivers does not work!"'
 }
 
 check_ganglia() {
-    _log "Check ${CYAN}Ganglia monitors$WHITE"
+    _log "Check ${CYAN}Ganglia$WHITE monitors"
     readarray -t ghosts < <(gstat -al1 | cut -f1 -d' ')
     for host in $(_get_hosts); do
         if [[ ! " ${ghosts[*]} " == *" $host "* ]]; then
@@ -55,7 +55,7 @@ check_ganglia() {
 }
 
 check_slurm() {
-    _log "Check whether nodes are ready for ${CYAN}SLURM$WHITE"
+    _log "Check whether nodes are in ${CYAN}SLURM$WHITE"
     for host in $(_get_hosts); do
         if ! sinfo --Node | grep -Fq "$host"; then
             _warn "Host $GREEN$host$RED is out of list"
@@ -72,6 +72,20 @@ check_slurm() {
             _log "Trying to wake it"
             scontrol update nodename="$host" state=idle
             sinfo --Node | grep "$host"
+        fi
+    done
+}
+
+check_snap()
+{
+    _log "Check that ${CYAN}SNAP$WHITE works properly"
+    hosts=$(pdsh "chromium --version --user-data-dir=/home/$ADMIN/snap/chromium/current \
+        > /dev/null 2>&1; echo $?" | grep -v 0 | cut -d: -f1)
+    for host in $hosts; do
+        _warn "SNAP daemon have no access to $BLUE/home$RED on $GREEN$host$RED"
+        if [[ $fix ]]; then
+            _log "Restarting ${CYAN}snapd$WHITE"
+            ssh "$host" systemctl restart snapd
         fi
     done
 }
@@ -97,6 +111,7 @@ check_drivers
 check_ganglia
 check_slurm
 check_daemons teamviewerd anydesk
+check_snap
 
 if [[ "$_nwarnings" -gt 0 && ! $fix ]]; then
     _topic "$_nwarnings check(s) failed. Try to run with -f"

@@ -71,6 +71,11 @@ configure_autofs() {
         _log "Wait until $BLUE/$dir$WHITE is mounted"
         until mount | grep -Fq "/etc/auto.$dir"; do sleep 0.1; done
     done
+
+    # If snapd started earlier than autofs, then snap applications failed to use the home directory
+    # https://forum.snapcraft.io/t/cannot-open-path-of-the-current-working-directory-permission-denied-bis/28704/61
+    _append /lib/systemd/system/snapd.service.d/snapd-after-autofs.conf \
+        "[Unit]" "After=snapd.socket autofs.service"
 }
 
 configure_admins() {
