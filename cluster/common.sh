@@ -107,7 +107,7 @@ _install() {
 _purge() {
     local package=$1
     local goal=$2
-    if dpkg -s "$package" | grep -Eq 'Status.*installed'; then
+    if dpkg -s "$package" 2>/dev/null | grep -Eq 'Status.*installed'; then
         _log "Purge $MAGENTA$pkg_name$WHITE to $goal"
         apt-get purge -y "$package"
     fi

@@ -219,7 +219,8 @@ install_software() {
     debconf-set-selections <<< "postfix postfix/main_mailer_type string 'Internet Site'"
     debconf-set-selections <<< "postfix postfix/mailname string $(hostname).$DOMAIN_NAME"
     _install --collection=Diagnostic \
-        htop pdsh clusterssh ganglia-monitor ncdu nmap mesa-utils mailutils net-tools gpustat
+        htop pdsh clusterssh ganglia-monitor ncdu nmap mesa-utils mailutils net-tools gpustat \
+        lm-sensors glances sysstat
     # Configure pdsh
     _append /etc/profile.d/pdsh.sh "export PDSH_RCMD_TYPE=ssh" "export WCOLL=$CONFIG/hosts"
     _append /etc/bash.bashrc ". /etc/profile.d/pdsh.sh"
@@ -343,7 +344,7 @@ install_proprietary_software() {
     _postpone_daemon_after_mount teamviewerd /opt/teamviewer
 
     ### Google Chrome ###
-    _install --use-opt --deb-from-distrib google-chrome-stable_current_amd64.deb
+    _install --use-opt --deb-from-distrib "google-chrome-stable_*_amd64.deb"
 
     ### AnyDesk ###
     _append /etc/apt/sources.list.d/anydesk-stable.list \
