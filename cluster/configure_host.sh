@@ -90,6 +90,7 @@ configure_admins() {
     admin_key=$(cat "$(_get_home $ADMIN)/.ssh/id_rsa.pub")
     _append /root/.ssh/authorized_keys "$admin_key"
     chmod 600 /root/.ssh/authorized_keys
+    _append /root/.forward "$ADMIN@$DOMAIN_NAME"
 }
 
 configure_local_home() {
