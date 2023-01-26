@@ -31,10 +31,10 @@ BEGIN { PROCINFO["sorted_in"] = "@val_num_desc" }
 END {
     '"$(pdsh grep MemTotal /proc/meminfo | awk '{ printf "total[\"%s\"] = %s;\n", $1, $3 }')"'
     for (host in mem) {
-        if (sum[host]/total[host] < 0.5) color="'"$GREEN"'"
-        else if (sum[host]/total[host] < 0.75) color="'"$YELLOW"'"
-        else color="'"$RED"'"
-        printf "%s %4.1f/%4.1fG%s\n", "'"$GREEN"'"host color, \
+        if (sum[host]/total[host] < 0.5) color = "'"$GREEN"'"
+        else if (sum[host]/total[host] < 0.75) color = "'"$YELLOW"'"
+        else color = "'"$RED"'"
+        printf "%s %4.1f/%4.1fG%s\n", "'"$WHITE"'"host color, \
             sum[host]/'"$factor"', total[host]/'"$factor"', "'"$NC"'"
         for (user in mem[host]) {
             if (mem[host][user]/'"$factor"' > '"$threshold"') {
