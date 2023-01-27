@@ -370,6 +370,10 @@ fix_system_bugs() {
     if [[ $_modified ]]; then
         _restart_daemon polkit
     fi
+    # Help tensorflow to find the CUDA libraries
+    # https://discuss.tensorflow.org/t/cant-find-libdevice-directory-cuda-dir-nvvm-libdevice/11896
+    _append /etc/profile.d/tensorflow.sh "export XLA_FLAGS=--xla_gpu_cuda_data_dir=/usr/lib/cuda"
+    _append /etc/bash.bashrc ". /etc/profile.d/tensorflow.sh"
 }
 
 if [[ -t 1 ]]; then
