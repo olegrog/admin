@@ -19,14 +19,14 @@ source "$(dirname "$0")/common.sh"
 _is_master || _err "Run from the master host"
 
 for arg; do case $arg in
-    -f|--fix)           fix=1;;
+    -f|--fix)           fix=1; [[ $EUID -eq 0 ]] || _err "Run with sudo";;
     -h|--help)          print_help;;
     -*)                 echo "Unknown option '$arg'."; print_help;;
     *)                  echo "Unknown argument '$arg'."; print_help;;
 esac; done
 
 find_all_failed_daemons() {
-    _log "Check whether all daemons are running"
+    _log "Check whether all daemons are not failed"
     if pdsh 'systemctl list-units --state=failed' | grep failed; then
         if [[ $fix ]]; then
             _log "Trying to reset them"
@@ -78,6 +78,7 @@ check_slurm() {
 
 check_snap()
 {
+    local hosts
     _log "Check that ${CYAN}SNAP$WHITE works properly"
     hosts=$(pdsh "chromium --version --user-data-dir=/home/$ADMIN/snap/chromium/current \
         > /dev/null 2>&1; echo $?" | grep -v 0 | cut -d: -f1)
@@ -105,13 +106,27 @@ check_daemons() {
     done
 }
 
+check_systemd() {
+    local host stat not_running
+    _log "Check ${CYAN}systemd$WHITE status"
+    readarray -t not_running < <(pdsh SYSTEMD_COLORS=1 systemctl status \
+        | grep --color=no ': *State' | grep -v running)
+    for line in "${not_running[@]}"; do
+        host=${line%%:*}
+        stat=${line##* }
+        echo -e "$GREEN$host$NC is $stat and has the following dead units:"
+        ssh "$host" systemctl list-units | grep dead | awk '{print " -- "$1}'
+    done
+}
+
 _check_host_reachability
 find_all_failed_daemons
 check_drivers
 check_ganglia
+check_daemons teamviewerd anydesk slurmd
 check_slurm
-check_daemons teamviewerd anydesk
 check_snap
+check_systemd
 
 if [[ "$_nwarnings" -gt 0 && ! $fix ]]; then
     _topic "$_nwarnings check(s) failed. Try to run with -f"

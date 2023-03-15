@@ -94,7 +94,7 @@ configure_admins() {
 }
 
 configure_local_home() {
-    _topic "Set up $LOCAL_HOME"
+    _topic "Set up $BLUE$LOCAL_HOME$YELLOW"
     local root_device
     get_device() {
         basename "$(mount | grep " $1 " | cut -f1 -d' ' | sed 's/[0-9]*//g')"

@@ -294,7 +294,7 @@ _check_host_reachability() {
     _log "Check accessibility of all hosts"
     for host in $(_get_hosts); do
         [[ "$(hostname)" == "$host" ]] && continue
-        printf ' -- Check if %s is reachable...' "$host"
+        printf ' -- Check if %b is reachable...' "$GREEN$host$NC"
         # Check whether SSH port is open
         if nc -z -w 2 "$host" 22; then
             echo yes

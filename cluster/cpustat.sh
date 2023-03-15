@@ -10,7 +10,7 @@ load=$(echo | awk '{
     if (load < 25) color = "'"$GREEN"'"
     else if (load < 50) color = "'"$YELLOW"'"
     else color = "'"$RED"'"
-    printf "%s%*.1f%%%s", color, 5, load, "'$NC'"
+    printf "%s%*.1f%%%s", color, 5, load, "'"$NC"'"
 }')
 
 temp="$(sensors | grep Package | awk '{
@@ -18,7 +18,7 @@ temp="$(sensors | grep Package | awk '{
     if (temp < 40) color = "'"$GREEN"'"
     else if (temp < 60) color = "'"$YELLOW"'"
     else color = "'"$RED"'"
-    printf "%s%s%s\n", color, $4, "'$NC'"
+    printf "%s%s%s\n", color, $4, "'"$NC"'"
 }' | sort -g | tail -1)"
 
 mem="$(free -m | grep Mem | awk '{
@@ -26,7 +26,7 @@ mem="$(free -m | grep Mem | awk '{
     if (pct < 40) color = "'"$GREEN"'"
     else if (load < 70) color = "'"$YELLOW"'"
     else color = "'"$RED"'"
-    printf "%s%*.0f/%*.0f%s Gb", color, 3, free, 3, total, "'$NC'"
+    printf "%s%*.0f/%*.0f%s Gb", color, 3, free, 3, total, "'"$NC"'"
 }')"
 
 echo "$load | $temp | $mem | $(uptime -p)"
