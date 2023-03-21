@@ -16,7 +16,7 @@ declare -xr LDAP_BASE="dc=cdmm,dc=skoltech,dc=ru"
 declare -xr HEADER="# CMT cluster"
 declare -xr DOMAIN_NAME="skoltech.ru"
 declare -xr ADMIN=o.rogozin
-declare -xr GROUP=users
+declare -xr GROUP=skoltech
 declare -xr CONFIG=/opt/_config
 declare -xr DISTRIB=/opt/_distrib
 declare -xr MODULES=/opt/modules
