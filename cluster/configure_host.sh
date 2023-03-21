@@ -206,7 +206,7 @@ install_nvidia_drivers() {
 install_software() {
     _topic "Install software"
     _install --collection=Auxiliary \
-        ack ripgrep vim ranger tcl kdiff3 meld mlocate tldr tmux at pv source-highlight
+        ack ripgrep vim ranger tcl kdiff3 meld mlocate tldr tmux at pv source-highlight mc
     _install --collection=Repository \
         aptitude gconf-service software-properties-common snapd
     _install --collection="from Snap" --snap \
@@ -275,6 +275,11 @@ install_software() {
     if [[ $_installed_now ]]; then
         _restart_daemon gdm
     fi
+    _install --collection="for VASP" \
+        libfftw3-dev libhdf5-openmpi-dev libopenblas-dev libscalapack-openmpi-dev
+    java_version=$(java --version | head -1 | cut -d' ' -f2 | cut -d. -f1)
+    _install --collection="for Abaqus" \
+        csh openjdk-"$java_version"-jre libstdc++5
 }
 
 # This function is currently not used, but contains details of master host configuration
