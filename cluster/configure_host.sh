@@ -206,7 +206,7 @@ install_nvidia_drivers() {
 install_software() {
     _topic "Install software"
     _install --collection=Auxiliary \
-        ack ripgrep vim ranger tcl kdiff3 meld mlocate tldr tmux at pv source-highlight mc
+        ack ripgrep vim ranger tcl kdiff3 meld mlocate tldr tmux at pv source-highlight mc jq
     _install --collection=Repository \
         aptitude gconf-service software-properties-common snapd
     _install --collection="from Snap" --snap \
@@ -366,6 +366,12 @@ activate_opt_software() {
     _append /etc/bash.bashrc ". /opt/spack/share/spack/setup-env.sh"
     _copy /usr/share/applications/Mathematica.desktop
     _copy /usr/share/applications/Trello.desktop
+
+    # Activate indirect GLX (needed, e.g., for Abaqus)
+    # https://askubuntu.com/questions/1100451/how-to-enable-allowindirectglx-on-ubuntu-18-04-with-nvidia-1050ti
+    _append /etc/X11/xorg.conf.d/10-indirectglx.conf \
+        'Section "ServerFlags"' '  Option "AllowIndirectGLX" "on"' \
+        '  Option "IndirectGLX" "on"' 'EndSection'
 }
 
 fix_system_bugs() {
