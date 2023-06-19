@@ -231,7 +231,7 @@ install_software() {
         g++ gfortran clang clang-tidy clang-format clang-tools cabal-install cppcheck \
         libc++-dev libc++abi-dev
     _install --collection=Development \
-        valgrind git git-lfs subversion cmake flex build-essential doxygen pax-utils
+        valgrind git git-lfs subversion cmake flex build-essential doxygen graphviz pax-utils
     _install --collection=Multimedia \
         ffmpeg imagemagick smpeg-plaympeg graphviz libcanberra-gtk-module
     _install --collection=Visualization \
@@ -257,9 +257,16 @@ install_software() {
         octave-optiminterp octave-parallel octave-specfun octave-splines octave-strings \
         octave-struct octave-tsa
     _install --collection=Python \
-        python3 python3-pip jupyter
+        python3 python3-pip jupyter python-is-python3
     _install --collection="Python libraries" --pip \
-        numpy scipy sympy matplotlib sklearn numba pylint mpi4py keras tensorflow telegram-send
+        numpy scipy sympy matplotlib sklearn numba pylint flake8 yapf mpi4py \
+        keras tensorflow telegram-send
+    _install --collection="PyTorch" --pip torch torchvision torchaudio
+    if [[ $_installed_now ]]; then
+        if [[ $(python -c "import torch; print(torch.cuda.is_available())") != 'True' ]]; then
+            _warn "CUDA is not available for ${MAGENTA}PyTorch$NC"
+        fi
+    fi
     _install --collection=MPI \
         openmpi-common openmpi-bin libopenmpi-dev
     _install --collection=LaTeX \
@@ -280,7 +287,7 @@ install_software() {
         libfftw3-dev libhdf5-openmpi-dev libopenblas-dev libscalapack-openmpi-dev
     java_version=$(java --version | head -1 | cut -d' ' -f2 | cut -d. -f1)
     _install --collection="for Abaqus" \
-        csh openjdk-"$java_version"-jre libstdc++5
+        csh openjdk-"$java_version"-jre libstdc++5 libxm4 mksh
 }
 
 # This function is currently not used, but contains details of master host configuration
