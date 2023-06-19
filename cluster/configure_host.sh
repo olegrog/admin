@@ -228,7 +228,8 @@ install_software() {
     _copy /etc/ganglia/gmond.conf
     [[ $_modified ]] && _restart_daemon ganglia-monitor
     _install --collection=Compilers \
-        g++ gfortran clang clang-tidy clang-format clang-tools cabal-install
+        g++ gfortran clang clang-tidy clang-format clang-tools cabal-install cppcheck \
+        libc++-dev libc++abi-dev
     _install --collection=Development \
         valgrind git git-lfs subversion cmake flex build-essential doxygen pax-utils
     _install --collection=Multimedia \
