@@ -231,7 +231,8 @@ install_software() {
         g++ gfortran clang clang-tidy clang-format clang-tools cabal-install cppcheck \
         libc++-dev libc++abi-dev
     _install --collection=Development \
-        valgrind git git-lfs subversion cmake flex build-essential doxygen graphviz pax-utils
+        valgrind git git-lfs subversion cmake flex build-essential doxygen graphviz pax-utils \
+        ninja-build
     _install --collection=Multimedia \
         ffmpeg imagemagick smpeg-plaympeg graphviz libcanberra-gtk-module
     _install --collection=Visualization \
@@ -315,7 +316,7 @@ install_software_on_master_host() {
     fstype="$(blkid -o value -s TYPE "$device")"
     _append /etc/fstab "$device\t/home\t$fstype\tdefaults,usrquota\t0\t2"
 
-    ### Ganglia monitoring
+    ### Ganglia ###
     _install gmetad ganglia-webfrontend rrdtool
     # Bugfix: https://github.com/ganglia/ganglia-web/issues/361
     # Ganglia-webfrontend 3.7.5 is not compatible with php8+, therefore we install php7.4 from ppa
@@ -335,6 +336,13 @@ install_software_on_master_host() {
             "$IGNORE_UID_BELOW = 1000;" "$IGNORE_GID_BELOW = 1000;"
     fi
     delgroup $GROUP || _log "There is no unix group $CYAN$GROUP$NC"
+
+    ### Spack ###
+    git clone -c feature.manyFiles=true https://github.com/spack/spack.git /opt/spack
+    local spack_cron="/etc/cron.daily/spack"
+    [[ -f "$spack_cron" ]] || echo "#!/bin/sh" > "$spack_cron"
+    _append "$spack_cron" "cd /opt/spack" "sudo -u $ADMIN git pull -q"
+    chmod +x "$spack_cron"
 }
 
 # For software installed to /opt from deb packages
