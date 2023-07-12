@@ -23,9 +23,9 @@ declare -xr MODULES=/opt/modules
 declare -xr LOCAL_HOME=/home-local
 
 _log() { echo -e "--$WHITE $*.$NC"; }
-_err() { echo -e "$RED$*!$NC"; exit 1; }
-_warn() { echo -e "--$RED $*.$NC"; ((++_nwarnings)); }
-_failed() { echo -e "--$RED Failed!$NC"; }
+_err() { echo -e "$RED$*!$NC" >&2; exit 1; }
+_warn() { echo -e "--$RED $*.$NC" >&2; ((++_nwarnings)); }
+_failed() { echo -e "--$RED Failed!$NC" >&2; }
 _topic() { echo -e "===$YELLOW $* $NC"===; }
 _line() { printf '=%.0s' $(seq -7 ${#1}); printf '\n'; }
 _block() { _line "$1 $2"; echo -e "=== $1 $GREEN$2$NC ==="; _line "$1 $2"; }
