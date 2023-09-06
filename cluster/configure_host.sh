@@ -232,7 +232,7 @@ install_software() {
         libc++-dev libc++abi-dev
     _install --collection=Development \
         valgrind git git-lfs subversion cmake flex build-essential doxygen graphviz pax-utils \
-        ninja-build
+        ninja-build gcovr
     _install --collection=Multimedia \
         ffmpeg imagemagick smpeg-plaympeg graphviz libcanberra-gtk-module
     _install --collection=Visualization \
