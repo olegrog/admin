@@ -232,7 +232,7 @@ install_software() {
         libc++-dev libc++abi-dev
     _install --collection=Development \
         valgrind git git-lfs subversion cmake flex build-essential doxygen graphviz pax-utils \
-        ninja-build gcovr
+        ninja-build gcovr google-perftools
     _install --collection=Multimedia \
         ffmpeg imagemagick smpeg-plaympeg graphviz libcanberra-gtk-module
     _install --collection=Visualization \
@@ -240,7 +240,8 @@ install_software() {
     _install --collection="Scientific libraries" \
         gmsh hdf5-tools
     _install --collection="C++ libraries" \
-        libboost-all-dev libblas-dev liblapack-dev zlib1g-dev trilinos-all-dev libvtk7-dev
+        libboost-all-dev libblas-dev liblapack-dev zlib1g-dev trilinos-all-dev libvtk7-dev \
+        libasio-dev
     debconf-set-selections <<< "nvidia-cudnn nvidia-cudnn/question select I Agree"
     debconf-set-selections <<< "nvidia-cudnn nvidia-cudnn/license note"
     _install --collection="CUDA libraries" \
