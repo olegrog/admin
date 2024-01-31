@@ -229,7 +229,7 @@ install_software() {
     [[ $_modified ]] && _restart_daemon ganglia-monitor
     _install --collection=Compilers \
         g++ gfortran clang clang-tidy clang-format clang-tools cabal-install cppcheck \
-        libc++-dev libc++abi-dev
+        libc++-dev libc++abi-dev lldb
     _install --collection=Development \
         valgrind git git-lfs subversion cmake flex build-essential doxygen graphviz pax-utils \
         ninja-build gcovr google-perftools
