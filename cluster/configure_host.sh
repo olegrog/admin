@@ -302,8 +302,8 @@ install_software_on_master_host() {
     chown -R munge:munge $CONFIG/etc/munge
     chmod -R og-rx $CONFIG/etc/munge
 
-    mkdir -p $CONFIG/etc/slurm-llnl
-    mv /etc/slurm-llnl/slurm.conf $CONFIG/etc/slurm-llnl
+    mkdir -p $CONFIG/etc/slurm
+    mv /etc/slurm/slurm.conf $CONFIG/etc/slurm
     # Run with `-i` after incompatible upgrade: slurmctld -i
 
     ### Software RAID ###

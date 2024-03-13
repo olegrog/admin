@@ -10,7 +10,7 @@ _is_master || _err "Run from the master host"
 host=$1
 
 if _ask_user "remove $host"; then
-    slurm="$CONFIG/etc/slurm-llnl/slurm.conf"
+    slurm="$CONFIG/etc/slurm/slurm.conf"
     _log "Remove record in LDAP"
     ldapdelete -x -D "cn=admin,$LDAP_BASE" -y /etc/ldap.secret "cn=$host,ou=Hosts,$LDAP_BASE" \
         || _failed
@@ -18,6 +18,6 @@ if _ask_user "remove $host"; then
     _remove_line "$CONFIG/hosts" "$host"
     _log "Purge the SLURM config"
     sed -i~ "/NodeName=$host/d;s/,$host//" "$slurm"
-    colordiff "$slurm~" "$slurm"
+    colordiff "$slurm~" "$slurm" || :
     _topic "Host $host is successfully deleted!"
 fi

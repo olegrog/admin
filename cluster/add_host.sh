@@ -39,7 +39,7 @@ update_ssh_known_hosts() {
 update_configs() {
     _topic "Register a new host in config files"
     local ncores
-    local slurm="$CONFIG/etc/slurm-llnl/slurm.conf"
+    local slurm="$CONFIG/etc/slurm/slurm.conf"
     ncores=$(ssh "$host" lscpu -e=Core | grep '[0-9]' | sort -u | wc -l)
     _append "$CONFIG/hostfile" "$(printf '%-12s%s\n' "$host" "slots=$ncores")"
     _append "$CONFIG/hosts" "$host"
@@ -60,7 +60,7 @@ update_configs() {
             FNR==f { $2=$2",'"$host"'" } 1
         ' "$slurm~~" "$slurm~~" > "$slurm"
         rm "$slurm~~"
-        colordiff "$slurm~" "$slurm"
+        colordiff "$slurm~" "$slurm" || :
         _log "Instruct ${CYAN}slurmctld$WHITE to re-read ${BLUE}slurm.conf$WHITE"
         scontrol reconfigure
         _log "Change status of $GREEN$host$WHITE"
