@@ -188,7 +188,7 @@ install_nvidia_drivers() {
     local installed_versions best_version
 
     readarray -t installed_versions < <(dpkg-query --list "nvidia-driver-*" 2>/dev/null \
-        | grep "^ii" | grep -oE "nvidia-driver-[0-9]{3}" | cat)
+        | grep "^ii" | grep -m1 -oE "nvidia-driver-[0-9]{3}" | cat)
     best_version="$(apt-cache search nvidia-driver \
         | grep -oE "nvidia-driver-[0-9]{3}" | sort -V | tail -1)"
 
@@ -210,7 +210,7 @@ install_software() {
     _install --collection=Repository \
         aptitude gconf-service software-properties-common snapd
     _install --collection="from Snap" --snap \
-        chromium slack telegram-desktop vlc shellcheck julia clion codium firefox
+        chromium slack telegram-desktop vlc shellcheck julia clion codium firefox code
     _refresh_snap julia edge
     _install --collection="Remote desktop" \
         xrdp tigervnc-standalone-server xfce4-session
@@ -220,7 +220,7 @@ install_software() {
     debconf-set-selections <<< "postfix postfix/mailname string $(hostname).$DOMAIN_NAME"
     _install --collection=Diagnostic \
         htop pdsh clusterssh ganglia-monitor ncdu nmap mesa-utils mailutils net-tools gpustat \
-        lm-sensors glances sysstat
+        lm-sensors glances sysstat linux-tools-generic fio nvtop
     # Configure pdsh
     _append /etc/profile.d/pdsh.sh "export PDSH_RCMD_TYPE=ssh" "export WCOLL=$CONFIG/hosts"
     _append /etc/bash.bashrc ". /etc/profile.d/pdsh.sh"
@@ -232,7 +232,7 @@ install_software() {
         libc++-dev libc++abi-dev lldb
     _install --collection=Development \
         valgrind git git-lfs subversion cmake flex build-essential doxygen graphviz pax-utils \
-        ninja-build gcovr google-perftools
+        ninja-build gcovr google-perftools bazel-bootstrap
     _install --collection=Multimedia \
         ffmpeg imagemagick smpeg-plaympeg graphviz libcanberra-gtk-module
     _install --collection=Visualization \
@@ -261,8 +261,8 @@ install_software() {
     _install --collection=Python \
         python3 python3-pip jupyter python-is-python3
     _install --collection="Python libraries" --pip \
-        numpy scipy sympy matplotlib sklearn numba pylint flake8 yapf mpi4py \
-        keras tensorflow telegram-send
+        numpy scipy sympy matplotlib scikit-learn numba pylint flake8 yapf mpi4py \
+        keras tensorflow telegram-send opencv-python
     _install --collection="PyTorch" --pip torch torchvision torchaudio
     if [[ $_installed_now ]]; then
         if [[ $(python -c "import torch; print(torch.cuda.is_available())") != 'True' ]]; then
