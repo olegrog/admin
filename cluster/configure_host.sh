@@ -206,14 +206,14 @@ install_nvidia_drivers() {
 install_software() {
     _topic "Install software"
     _install --collection=Auxiliary \
-        ack ripgrep vim ranger tcl kdiff3 meld mlocate tldr tmux at pv source-highlight mc jq
+        ack ripgrep vim ranger tcl kdiff3 meld locate tldr tmux at pv source-highlight mc jq
     _install --collection=Repository \
-        aptitude gconf-service software-properties-common snapd
+        aptitude software-properties-common snapd
     _install --collection="from Snap" --snap \
-        chromium slack telegram-desktop vlc shellcheck julia clion codium firefox code
+        chromium slack telegram-desktop vlc shellcheck julia clion codium firefox code nvim
     _refresh_snap julia edge
     _install --collection="Remote desktop" \
-        xrdp tigervnc-standalone-server xfce4-session
+        ubuntu-gnome-desktop xrdp tigervnc-standalone-server xfce4-session
     _add_user_to_group xrdp ssl-cert
     # Preconfigure postfix used by mail
     debconf-set-selections <<< "postfix postfix/main_mailer_type string 'Internet Site'"
@@ -240,8 +240,7 @@ install_software() {
     _install --collection="Scientific libraries" \
         gmsh hdf5-tools
     _install --collection="C++ libraries" \
-        libboost-all-dev libblas-dev liblapack-dev zlib1g-dev trilinos-all-dev libvtk7-dev \
-        libasio-dev
+        libboost-all-dev libblas-dev liblapack-dev zlib1g-dev trilinos-all-dev libasio-dev
     debconf-set-selections <<< "nvidia-cudnn nvidia-cudnn/question select I Agree"
     debconf-set-selections <<< "nvidia-cudnn nvidia-cudnn/license note"
     _install --collection="CUDA libraries" \
@@ -255,9 +254,8 @@ install_software() {
     _install --collection=Octave \
         octave octave-bim octave-data-smoothing octave-divand octave-doc octave-fpl octave-general \
         octave-geometry octave-interval octave-io octave-level-set octave-linear-algebra \
-        octave-miscellaneous octave-missing-functions octave-msh octave-nlopt octave-nurbs \
-        octave-optiminterp octave-parallel octave-specfun octave-splines octave-strings \
-        octave-struct octave-tsa
+        octave-miscellaneous octave-msh octave-nlopt octave-nurbs octave-optiminterp \
+        octave-parallel octave-splines octave-strings octave-struct octave-tsa
     _install --collection=Python \
         python3 python3-pip jupyter python-is-python3
     _install --collection="Python libraries" --pip \
@@ -275,9 +273,9 @@ install_software() {
         texlive-latex-extra biber texlive-xetex texlive-luatex cm-super texlive-science dvipng \
         texlive-extra-utils
     _install --collection="for Basilisk" \
-        darcs gifsicle pstoedit swig libpython3-dev libosmesa6-dev libglew-dev
+        gifsicle pstoedit swig libpython3-dev libosmesa6-dev libglew-dev
     _install --collection="for OpenFOAM" \
-        libreadline-dev libncurses5-dev libgmp-dev libmpfr-dev libmpc-dev
+        libreadline-dev libncurses-dev libgmp-dev libmpfr-dev libmpc-dev
     _install --collection="for Firedrake" \
         bison python3-tk python3-venv libopenblas-dev
     _install --collection="for ANSYS" \
@@ -372,7 +370,7 @@ install_proprietary_software() {
     _append /etc/apt/sources.list.d/anydesk-stable.list \
         "deb http://deb.anydesk.com/ all main"
     if [[ $_modified ]]; then
-        curl -s https://keys.anydesk.com/repos/DEB-GPG-KEY | apt-key add -
+        curl -s https://keys.anydesk.com/repos/DEB-GPG-KEY -o /etc/apt/trusted.gpg.d/anydesk.asc
         apt-get update
     fi
     _install anydesk

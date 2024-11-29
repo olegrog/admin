@@ -52,7 +52,7 @@ _install() {
                 ;;
         # flag -i used since some libraries are capitalized
         --pip)  status_cmd() { grep -qi "$1==" <<< "$pip_list";  }
-                install_cmd() { pip3 install "$1"; }
+                install_cmd() { pip3 install --break-system-packages "$1"; }
                 pip_list=$(pip3 freeze)
                 ;;
         *) packages+=("$arg");;
@@ -108,7 +108,7 @@ _purge() {
     local package=$1
     local goal=$2
     if dpkg -s "$package" 2>/dev/null | grep -Eq 'Status.*installed'; then
-        _log "Purge $MAGENTA$pkg_name$WHITE to $goal"
+        _log "Purge $MAGENTA$package$WHITE to $goal"
         apt-get purge -y "$package"
     fi
 }
@@ -296,10 +296,10 @@ _check_host_reachability() {
         [[ "$(hostname)" == "$host" ]] && continue
         printf ' -- Check if %b is reachable...' "$GREEN$host$NC"
         # Check whether SSH port is open
-        if nc -z -w 2 "$host" 22; then
-            echo yes
+        if nc -z -w 2 "$host" 22 2> /dev/null; then
+            echo -e "${WHITE}yes$NC"
         else
-            echo no
+            echo -e "${RED}no$NC"
             err=1
         fi
     done
