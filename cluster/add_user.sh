@@ -57,8 +57,10 @@ register_user() {
     fi
     _topic "Register a new user"
     _log "Add an UNIX user"
+    _append /etc/adduser.conf "NAME_REGEX='^[a-z]\.[a-z]+$'"
     adduser_options=(
-        --disabled-login        # disable login until a password is set
+        --disabled-password     # disable login until a password is set
+        --shell "/bin/bash"     # otherwise /usr/sbin/nologin is used
         --ingroup "$group"
         --firstuid "$firstuid"  # avoid intersection of UNIX and LDAP users
         --gecos "${first_name^} ${last_name^}"

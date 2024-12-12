@@ -2,7 +2,7 @@
 
 print_help() {
     cat << EOF
-Usage: ./$(basename "$0") [<options>] <first name> <last name>
+Usage: ./$(basename "$0") [<options>]
 Options:
   --yes                   Automatic yes to prompts
   --help                  Print this help.
