@@ -31,9 +31,9 @@ download() {
     local dir=$1
     local url=$2
     if [[ ! -d "$dir" ]]; then
-        _log "Downloading $BLUE$url$WHITE"
-        wget -O - "$url" | tar xz
-        [[ -f "$dir*" ]] || _err "Failed to download $BLUE$url$RED"
+        _log "Download $BLUE$url$WHITE"
+        wget -q --show-progress -O - "$url" | tar -xz -C "$DIR"
+        [[ -d "$dir*" ]] || _err "Failed to download $BLUE$url$RED"
         rename "s/$dir.*/$dir/" "$dir*"
     else
         _log "$BLUE$dir$WHITE already exists"
@@ -52,7 +52,7 @@ download "$THIRD_PARTY_DIR" "$tp_url"
     if command -v icoFoam > /dev/null; then
         _log "${MAGENTA}OpenFOAM-$of_version$WHITE is already built"
     else
-        _log "Building ${MAGENTA}OpenFOAM-$of_version$WHITE"
+        _log "Build ${MAGENTA}OpenFOAM-$of_version$WHITE"
         ./Allwmake -j -s -q > log.Allwmake 2>&1
     fi
 )
@@ -65,7 +65,7 @@ else
     cgal_file="$OPENFOAM_DIR/etc/config.sh/CGAL"
     if [ -f "$cgal_file" ]; then
         if grep -q 'GMP_ARCH_PATH *#' "$cgal_file"; then
-            _log "Fixing $BLUE$cgal_file$WHITE"
+            _log "Fix $BLUE$cgal_file$WHITE"
             sed -i 's/\$GMP_ARCH_PATH/& || true/' "$cgal_file"
             sed -i 's/\$MPFR_ARCH_PATH/& || true/' "$cgal_file"
         fi
@@ -73,11 +73,11 @@ else
     aliases_file="$OPENFOAM_DIR/etc/config.sh/aliases"
     if [ -f "$aliases_file" ]; then
         if grep -Fq 'unalias wmRefresh 2' "$aliases_file"; then
-            _log "Fixing $BLUE$aliases_file$WHITE"
+            _log "Fix $BLUE$aliases_file$WHITE"
             sed -i 's/^ *unalias wmRefresh/& || true/' "$aliases_file"
         fi
     fi
-    _log "Generating $BLUE$module_file$WHITE"
+    _log "Generate $BLUE$module_file$WHITE"
     LMOD_DIR="/home/$ADMIN/local/lmod/lmod/libexec/" # to use the latest LMOD version
     $LMOD_DIR/sh_to_modulefile --to TCL -o "$module_file" --cleanEnv "$OPENFOAM_DIR/etc/bashrc"
     [[ -f "$module_file" ]] || _err "Failed to generate $BLUE$module_file$RED"
@@ -88,7 +88,7 @@ else
 fi
 
 ### 4. Test
-_log "Testing ${MAGENTA}OpenFOAM-$of_version$WHITE"
+_log "Test ${MAGENTA}OpenFOAM-$of_version$WHITE"
 ml "openfoam/${of_version#v}"
 if ! command -v decomposePar > /dev/null; then
     _err "Utility ${BLUE}decomposePar$RED cannot be found"

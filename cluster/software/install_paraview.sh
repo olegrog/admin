@@ -14,7 +14,7 @@ EOF
 }
 
 # shellcheck source=./common.sh
-source "$(dirname "$0")/common.sh"
+source "$(dirname "$0")/../common.sh"
 
 print_all_versions() {
     curl -s "https://www.paraview.org/files/listing.txt" \
@@ -31,8 +31,8 @@ for arg; do case $arg in
     *)                  versions+=("$arg");;
 esac; done
 
-[[ $EUID -eq 0 ]] || _err "Run with sudo"
 _is_master || _err "Run from the master host"
+[[ $EUID -eq 0 ]] && _err "Run without sudo"
 
 declare -r DIR=/opt/paraview
 declare -r PACKAGE_NAME=ParaView
@@ -45,30 +45,39 @@ get_full_version() { echo "${@%.tar.gz}" | cut -f2- -d-; }
 install() {
     local version="$1"
     local file="$2"
-    local dir="$3"
+    local paraview_dir="$3"
     local major_version full_version old_version
 
     major_version="$(echo "$version" | grep -Eo '[1-9]+\.[0-9]+')"
     full_version="$(get_full_version "$file")"
 
-    if [[ -f "$CACHE/$file" && -z "$force" ]]; then
-        _log "Use cached file $BLUE$CACHE/$file$WHITE"
+    if [[ -f "$CACHE/$file" ]]; then
+        _log "Cache file $BLUE$CACHE/$file$WHITE already exists"
     else
+        _log "Download $BLUE$file$WHITE"
         wget -q --show-progress "https://www.paraview.org/paraview-downloads/download.php?
         submit=Download&version=v$major_version&type=binary&os=Linux&downloadFile=$file" \
         -O "$CACHE/$file"
     fi
 
-    pv "$CACHE/$file" | tar -xz --no-same-owner -C "$DIR"
+    if [[ -d "$paraview_dir" ]]; then
+        _log "Directory $BLUE$paraview_dir$WHITE already exists"
+    else
+        _log "Create $BLUE$MODULES_DIR/$full_version$WHITE"
+        pv "$CACHE/$file" | tar -xz --no-same-owner -C "$DIR"
+    fi
 
-    if [[ -f "$MODULES_DIR/$full_version" && -z "$force" ]]; then
-        _warn "Module file $BLUE$MODULES_DIR/$full_version$RED already exists"
+    if [[ -f "$MODULES_DIR/$full_version" ]]; then
+        _log "Module file $BLUE$MODULES_DIR/$full_version$WHITE already exists"
     else
         _log "Generate file $BLUE$MODULES_DIR/$full_version$WHITE"
-        old_version="$(find "$MODULES_DIR" | tail -1)"
+        old_version="$(basename "$(find "$MODULES_DIR" | tail -1)")"
         sed "s/$old_version/$full_version/" \
             "$MODULES_DIR/$old_version" > "$MODULES_DIR/$full_version"
     fi
+    _log "Test $MAGENTA$PACKAGE_NAME $full_version$WHITE"
+    ml "paraview/$full_version"
+    pvserver --version
 }
 
 readarray -t files < <(print_all_versions)
@@ -79,15 +88,15 @@ fi
 
 for version in "${versions[@]}"; do
     file=$(printf '%s\n' "${files[@]}" | grep "$version" | tail -1)
-    [[ -z "$file" ]] && { _warn "Version $version is not found"; continue; }
+    [[ -z "$file" ]] && { _warn "Version $MAGENTA$version$RED is not found"; continue; }
     version="$(get_short_version "$file")"
-    dir="$DIR/${file%.tar.gz}"
-    if [[ -d "$dir" && -z "$force" ]]; then
-        _warn "Version $version already installed"
+    paraview_dir="$DIR/${file%.tar.gz}"
+    if [[ -d "$paraview_dir" && -z "$force" ]]; then
+        _log "Version $MAGENTA$version$WHITE already installed"
     else
         if _ask_user "install $PACKAGE_NAME $version"; then
-            _log "Install ${MAGENTA}$PACKAGE_NAME $version$WHITE"
-            install "$version" "$file" "$dir"
+            _log "Install $MAGENTA$PACKAGE_NAME $version$WHITE"
+            install "$version" "$file" "$paraview_dir"
         fi
     fi
 done
