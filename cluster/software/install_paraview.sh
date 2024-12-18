@@ -5,6 +5,7 @@ print_help() {
 Usage: ./$(basename "$0") [<options>] [version1] [version2] ...
 Install the latest version if list of versions is not specified.
 Options:
+  --egl                   Use the headless version
   --force                 Force rewrite files
   --list                  List of files versions
   --yes                   Automatic yes to prompts
@@ -18,18 +19,21 @@ source "$(dirname "$0")/../common.sh"
 
 print_all_versions() {
     curl -s "https://www.paraview.org/files/listing.txt" \
-    | grep -E "ParaView-[0-9\.]+-MPI-Linux-.*$(arch)\.tar\.gz" \
-    | awk '{print $1}' | sed 's_.*/__' | sort -V -t- -k2
+    | grep -E "ParaView-[0-9\.]+$sub-MPI-Linux-.*$(arch)\.tar\.gz" \
+    | awk '{print $1}' | grep -v nightly | sed 's_.*/__' | sort -V -t- -k2
 }
 
 for arg; do case $arg in
+    -e|--egl)           sub='-egl';;
     -f|--force)         force=1;;
-    -l|--list)          print_all_versions; exit;;
+    -l|--list)          dump_list=1;;
     -y|--yes)           _assume_yes=1;;
     -h|--help)          print_help;;
     -*)                 echo "Unknown option '$arg'."; print_help;;
     *)                  versions+=("$arg");;
 esac; done
+
+[[ dump_list -eq 1 ]] && { print_all_versions; exit 0; }
 
 _is_master || _err "Run from the master host"
 [[ $EUID -eq 0 ]] && _err "Run without sudo"
@@ -39,7 +43,7 @@ declare -r PACKAGE_NAME=ParaView
 declare -r CACHE="$DISTRIB/$PACKAGE_NAME"
 declare -r MODULES_DIR="$MODULES/paraview"
 
-get_short_version() { echo "$@" | cut -f2 -d-; }
+get_short_version() { echo "$@" | awk -F- '{printf($2)}'; echo "$sub"; }
 get_full_version() { echo "${@%.tar.gz}" | cut -f2- -d-; }
 
 install() {
@@ -63,7 +67,7 @@ install() {
     if [[ -d "$paraview_dir" ]]; then
         _log "Directory $BLUE$paraview_dir$WHITE already exists"
     else
-        _log "Create $BLUE$MODULES_DIR/$full_version$WHITE"
+        _log "Create $BLUE$paraview_dir$WHITE"
         pv "$CACHE/$file" | tar -xz --no-same-owner -C "$DIR"
     fi
 
