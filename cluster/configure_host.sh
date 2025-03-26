@@ -292,6 +292,10 @@ install_software() {
 
 # This function is currently not used, but contains details of master host configuration
 install_software_on_master_host() {
+    local dpkg_arch, ubuntu_codename
+    dpkg_arch=$(dpkg --print-architecture)
+    ubuntu_codename=$(. /etc/os-release && echo "$VERSION_CODENAME")
+
     ### SLURM ###
     _install slurmctld
 
@@ -342,6 +346,16 @@ install_software_on_master_host() {
     [[ -f "$spack_cron" ]] || echo "#!/bin/sh" > "$spack_cron"
     _append "$spack_cron" "cd /opt/spack" "sudo -u $ADMIN git pull -q"
     chmod +x "$spack_cron"
+
+    ### Docker ###
+    # https://docs.docker.com/engine/install/ubuntu/#install-using-the-repository
+    local docker_key="/etc/apt/keyrings/docker.asc"
+    local docker_repo="https://download.docker.com/linux/ubuntu"
+    mkdir -p /etc/apt/keyrings
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o "$docker_key"
+    _append /etc/apt/sources.list.d/docker.list \
+        "deb [arch=$dpkg_arch signed-by=$docker_key] $docker_repo $ubuntu_codename stable"
+    _install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 }
 
 # For software installed to /opt from deb packages
