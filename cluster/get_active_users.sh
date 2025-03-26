@@ -7,13 +7,13 @@ date
 _topic "Processes with high CPU load"
 
 columns="pcpu,pmem,user:15,comm:33,etime,state"
-ps -o "$columns" k -pcpu | head -1 # print a header only
-pdsh ps --no-headers -eo "$columns" k -pcpu | awk '
+ps -o "$columns" | head -1 # print a header only
+pdsh ps --no-headers -eo "etimes,$columns" --sort -etime | awk '
 {
-    if ($2 > 25) {
+    if ($2 > 10 && $3 > 10 && $8 == "R") {
         if (h != $1) print "'"$WHITE"'"$1"'"$NC"'"
         h=$1
-        gsub(/[a-z]*: /, "")
+        sub(/[a-z]*: *[0-9]* /, "")
         print
     }
 }'
