@@ -33,8 +33,8 @@ download() {
     if [[ ! -d "$dir" ]]; then
         _log "Download $BLUE$url$WHITE"
         wget -q --show-progress -O - "$url" | tar -xz -C "$DIR"
-        [[ -d "$dir*" ]] || _err "Failed to download $BLUE$url$RED"
         rename "s/$dir.*/$dir/" "$dir*"
+        [[ -d "$dir" ]] || _err "Failed to download $BLUE$url$RED"
     else
         _log "$BLUE$dir$WHITE already exists"
     fi
