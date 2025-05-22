@@ -4,7 +4,13 @@
 source "$(dirname "$0")/common.sh"
 
 total_load=$(ps -A -o pcpu | tail -n+2 | paste -sd+ | bc)
-ncpu=$(grep -c processor /proc/cpuinfo)
+ncpu=$(nproc --all)
+ncores=$(lscpu -b -p=Core,Socket | grep -v '^#' | sort -u | wc -l)
+
+name=$(lscpu | sed -nr '/Model name/ s/.*:\s*(.*) @ .*/\1/p' | sed 's/ CPU//;s/([RTM]*)//g' | awk '{
+    printf "%s%-25s%s%3s%s\n", "'"$BLUE"'", $0, "'"$WHITE"'", "'"$ncores"'", "'"$NC"'"
+}')
+
 load=$(echo | awk '{
     load = '"$total_load/$ncpu"'
     if (load < 25) color = "'"$GREEN"'"
@@ -29,4 +35,4 @@ mem="$(free -m | grep Mem | awk '{
     printf "%s%*.0f/%*.0f%s Gb", color, 3, free, 3, total, "'"$NC"'"
 }')"
 
-echo "$load | $temp | $mem | $(uptime -p)"
+echo "$name | $load | $temp | $mem | $(uptime -p)"
