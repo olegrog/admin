@@ -13,7 +13,7 @@ configure_ssh() {
     if ! grep -q "^$pa no" /etc/ssh/sshd_config; then
         _log "Forbid SSH authentication by password"
         sed -i "s/#$pa yes/$pa no/" /etc/ssh/sshd_config
-        systemctl reload sshd
+        # No need to run `systemctl reload sshd` since Ubuntu 22.10
     fi
 }
 
