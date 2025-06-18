@@ -208,7 +208,7 @@ _set_sysctl_option() {
     local option=$2
     local value=$3
     local log=$4
-    if ! grep -q "^$option *= *$value *$" "$file"; then
+    if ! grep -sq "^$option *= *$value *$" "$file"; then
         _log "$log"
         if [[ -f "$file" ]]; then
             _warn "Switch off the previous value"

@@ -163,11 +163,16 @@ configure_shell() {
     fi
 }
 
-configure_mpi() {
+configure_hpc() {
     _topic "Configure MPI"
     if [[ $(cat /proc/sys/kernel/yama/ptrace_scope) == 1 ]]; then
         _set_sysctl_option 10-ptrace.conf kernel.yama.ptrace_scope 0 \
             "Allow ptracing of non-child processes by non-root users"
+    fi
+    _topic "Configure performance counters"
+    if [[ $(cat /proc/sys/kernel/perf_event_paranoid) -gt 1 ]]; then
+        _set_sysctl_option 99-perf.conf kernel.perf_event_paranoid 1 \
+            "Allow running perf by non-root users"
     fi
 }
 
@@ -455,7 +460,7 @@ configure_slurm
 configure_apt
 configure_environment_modules
 configure_shell
-configure_mpi
+configure_hpc
 install_nvidia_drivers
 install_software
 install_proprietary_software
