@@ -226,13 +226,16 @@ install_software() {
     debconf-set-selections <<< "postfix postfix/mailname string $(hostname).$DOMAIN_NAME"
     _install --collection=Diagnostic \
         htop pdsh clusterssh ganglia-monitor ncdu nmap mesa-utils mailutils net-tools gpustat \
-        lm-sensors glances sysstat linux-tools-generic fio nvtop
+        lm-sensors glances sysstat acct linux-tools-generic fio nvtop
     # Configure pdsh
     _append /etc/profile.d/pdsh.sh "export PDSH_RCMD_TYPE=ssh" "export WCOLL=$CONFIG/hosts"
     _append /etc/bash.bashrc ". /etc/profile.d/pdsh.sh"
     # Configure ganglia-monitor
     _copy /etc/ganglia/gmond.conf
     [[ $_modified ]] && _restart_daemon ganglia-monitor
+    # Enable sysstat data collection
+    _append /etc/default/sysstat 'ENABLED="true"'
+    [[ $_modified ]] && _restart_daemon sysstat
     _install --collection=Compilers \
         g++ gfortran clang clang-tidy clang-format clang-tools cabal-install cppcheck \
         libc++-dev libc++abi-dev lldb
