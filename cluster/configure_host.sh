@@ -215,7 +215,8 @@ install_software() {
     _install --collection=Repository \
         aptitude software-properties-common snapd
     _install --collection="from Snap" --snap \
-        chromium slack telegram-desktop vlc shellcheck julia clion codium firefox code nvim
+        chromium slack telegram-desktop vlc shellcheck julia clion codium firefox code aws-cli \
+        nvim sublime-text
     _refresh_snap julia edge
     _install --collection="Remote desktop" \
         ubuntu-gnome-desktop xrdp tigervnc-standalone-server xfce4-session
@@ -237,13 +238,13 @@ install_software() {
         libc++-dev libc++abi-dev lldb
     _install --collection=Development \
         valgrind git git-lfs subversion cmake flex build-essential doxygen graphviz pax-utils \
-        ninja-build gcovr google-perftools bazel-bootstrap
+        ninja-build gcovr google-perftools bazel-bootstrap mercurial
     _install --collection=Multimedia \
         ffmpeg imagemagick smpeg-plaympeg graphviz libcanberra-gtk-module
     _install --collection=Visualization \
         gnuplot paraview
-    _install --collection="Scientific libraries" \
-        gmsh hdf5-tools
+    _install --collection="Scientific tools" \
+        gmsh hdf5-tools openbabel
     _install --collection="C++ libraries" \
         libboost-all-dev libblas-dev liblapack-dev zlib1g-dev trilinos-all-dev libasio-dev
     debconf-set-selections <<< "nvidia-cudnn nvidia-cudnn/question select I Agree"
@@ -289,7 +290,8 @@ install_software() {
         _restart_daemon gdm
     fi
     _install --collection="for VASP" \
-        libfftw3-dev libhdf5-openmpi-dev libopenblas-dev libscalapack-openmpi-dev
+        libfftw3-dev libhdf5-openmpi-dev libscalapack-openmpi-dev
+    _install --collection="for Siesta" libnetcdff-dev
     java_version=$(java --version | head -1 | cut -d' ' -f2 | cut -d. -f1)
     _install --collection="for Abaqus" \
         csh openjdk-"$java_version"-jre libstdc++5 libxm4 mksh
