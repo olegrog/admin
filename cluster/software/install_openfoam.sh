@@ -10,7 +10,7 @@ of_version=$1
 shopt -s extglob
 case $of_version in
     v*([0-9]))
-        base_url="https://dl.openfoam.com/source/$of_version"
+        base_url="https://sourceforge.net/projects/openfoam/files/$of_version"
         of_url="$base_url/OpenFOAM-$of_version.tgz"
         tp_url="$base_url/ThirdParty-$of_version.tgz";;
     *([0-9]))
@@ -33,7 +33,7 @@ download() {
     if [[ ! -d "$dir" ]]; then
         _log "Download $BLUE$url$WHITE"
         wget -q --show-progress -O - "$url" | tar -xz -C "$DIR"
-        rename "s/$dir.*/$dir/" "$dir*"
+        rename "s:$dir.*:$dir:" "$dir"*
         [[ -d "$dir" ]] || _err "Failed to download $BLUE$url$RED"
     else
         _log "$BLUE$dir$WHITE already exists"
@@ -65,9 +65,16 @@ else
     cgal_file="$OPENFOAM_DIR/etc/config.sh/CGAL"
     if [ -f "$cgal_file" ]; then
         if grep -q 'GMP_ARCH_PATH *#' "$cgal_file"; then
+            # Till v2506
             _log "Fix $BLUE$cgal_file$WHITE"
             sed -i 's/\$GMP_ARCH_PATH/& || true/' "$cgal_file"
             sed -i 's/\$MPFR_ARCH_PATH/& || true/' "$cgal_file"
+        fi
+        if grep -q 'GMP_ARCH_PATH" *#' "$cgal_file"; then
+            # Since v2506
+            _log "Fix $BLUE$cgal_file$WHITE"
+            sed -i 's/"\$GMP_ARCH_PATH"/& || true/' "$cgal_file"
+            sed -i 's/"\$MPFR_ARCH_PATH"/& || true/' "$cgal_file"
         fi
     fi
     aliases_file="$OPENFOAM_DIR/etc/config.sh/aliases"
@@ -79,7 +86,7 @@ else
     fi
     _log "Generate $BLUE$module_file$WHITE"
     LMOD_DIR="/home/$ADMIN/local/lmod/lmod/libexec/" # to use the latest LMOD version
-    $LMOD_DIR/sh_to_modulefile --to TCL -o "$module_file" --cleanEnv "$OPENFOAM_DIR/etc/bashrc"
+    "$LMOD_DIR/sh_to_modulefile" --to TCL -o "$module_file" --cleanEnv "$OPENFOAM_DIR/etc/bashrc"
     [[ -f "$module_file" ]] || _err "Failed to generate $BLUE$module_file$RED"
     echo "family foam" >> "$module_file"
     sed -i "s:/home/$ADMIN:\$env(HOME):g" "$module_file"
