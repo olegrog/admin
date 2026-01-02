@@ -20,7 +20,7 @@ pdsh ps --no-headers -eo "etimes,$columns" --sort -etime | awk '
 
 echo; _topic "CPU status"
 
-printf "%25s %13s | %5s | %8s | %10s | %s\n" processor_name cores load temp memory uptime
+printf "%25s %13s | %9s | %5s | %8s | %10s | %s\n" processor_name cores family load temp memory uptime
 printf -- '-%.0s' $(seq 90); printf '\n'
 pdsh "$(dirname "$0")/cpustat.sh" | awk '
 {

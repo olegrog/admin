@@ -11,6 +11,10 @@ name=$(lscpu | sed -nr '/Model name/ s/.*:\s*(.*) @ .*/\1/p' | sed 's/ CPU//;s/(
     printf "%s%-25s%s%3s%s\n", "'"$BLUE"'", $0, "'"$WHITE"'", "'"$ncores"'", "'"$NC"'"
 }')
 
+pmu=$(cat /sys/devices/cpu/caps/pmu_name | awk '{
+    printf "%s%9s%s\n", "'"$CYAN"'", $0, "'"$NC"'"
+}')
+
 load=$(echo | awk '{
     load = '"$total_load/$ncpu"'
     if (load < 25) color = "'"$GREEN"'"
@@ -35,4 +39,4 @@ mem="$(free -m | grep Mem | awk '{
     printf "%s%*.0f/%*.0f%s Gb", color, 3, free, 3, total, "'"$NC"'"
 }')"
 
-echo "$name | $load | $temp | $mem | $(uptime -p)"
+echo "$name | $pmu | $load | $temp | $mem | $(uptime -p)"
