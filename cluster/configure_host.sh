@@ -226,7 +226,7 @@ install_software() {
     debconf-set-selections <<< "postfix postfix/mailname string $(hostname).$DOMAIN_NAME"
     _install --collection=Diagnostic \
         htop pdsh clusterssh ganglia-monitor ncdu nmap mesa-utils mailutils net-tools gpustat \
-        lm-sensors glances sysstat acct linux-tools-generic fio nvtop
+        lm-sensors glances sysstat acct linux-tools-generic fio nvtop cpu-x
     # Configure pdsh
     _append /etc/profile.d/pdsh.sh "export PDSH_RCMD_TYPE=ssh" "export WCOLL=$CONFIG/hosts"
     _append /etc/bash.bashrc ". /etc/profile.d/pdsh.sh"
@@ -240,16 +240,17 @@ install_software() {
         g++ gfortran clang clang-tidy clang-format clang-tools cabal-install cppcheck \
         libc++-dev libc++abi-dev lldb
     _install --collection=Development \
-        valgrind git git-lfs subversion cmake flex build-essential doxygen graphviz pax-utils \
-        ninja-build gcovr google-perftools bazel-bootstrap mercurial
+        valgrind git git-lfs subversion cmake flex build-essential doxygen pax-utils ninja-build \
+        gcovr google-perftools bazel-bootstrap mercurial elfutils
     _install --collection=Multimedia \
-        ffmpeg imagemagick smpeg-plaympeg graphviz libcanberra-gtk-module
+        ffmpeg imagemagick smpeg-plaympeg libcanberra-gtk-module
     _install --collection=Visualization \
-        gnuplot paraview
+        gnuplot graphviz
     _install --collection="Scientific tools" \
         gmsh hdf5-tools openbabel
-    _install --collection="C++ libraries" \
-        libboost-all-dev libblas-dev liblapack-dev zlib1g-dev trilinos-all-dev libasio-dev
+    _install --collection="Development libraries" \
+        libboost-all-dev libblas-dev liblapack-dev zlib1g-dev trilinos-all-dev libasio-dev \
+        libpng-dev libvtk9-dev
     debconf-set-selections <<< "nvidia-cudnn nvidia-cudnn/question select I Agree"
     debconf-set-selections <<< "nvidia-cudnn nvidia-cudnn/license note"
     _install --collection="CUDA libraries" \
