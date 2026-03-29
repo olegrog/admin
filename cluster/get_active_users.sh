@@ -6,11 +6,11 @@ source "$(dirname "$0")/common.sh"
 date
 _topic "Processes with high CPU load"
 
-columns="pcpu,pmem,user:15,comm:33,etime,state"
+columns="pcpu,pmem,user:15,args:45,etime,state"
 ps -o "$columns" | head -1 # print a header only
 pdsh ps --no-headers -eo "etimes,$columns" --sort -etime | awk '
 {
-    if ($2 > 10 && $3 > 10 && $8 == "R") {
+    if ($2 > 10 && $3 > 10) {
         if (h != $1) print "'"$WHITE"'"$1"'"$NC"'"
         h=$1
         sub(/[a-z]*: *[0-9]* /, "")
@@ -52,7 +52,7 @@ echo; _topic "Last login"
 lastlog_range() {
     lastlog -b"$1" -t"$2" | grep -v Latest | grep -v root
 }
-
+(
 lastlog -b0 -t1 | head -1
 echo -en "$GREEN"; lastlog_range 0 1
 echo -en "$YELLOW"
@@ -62,4 +62,4 @@ done
 echo -en "$RED"; lastlog_range 10 100
 echo -en "$NC"
 echo
-
+) | column -t -l4
