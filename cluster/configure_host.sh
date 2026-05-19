@@ -129,6 +129,8 @@ configure_apt() {
 
 configure_memory_management() {
     _topic "Configure memory management"
+    # NB: In-kernel OOM does not work in practice => we rely on earlyoom
+    _install earlyoom
     # 1. Force OOM killer to do its work without investigation
     # https://remoteshaman.com/unix/common/overcommitting-linux-memory-and-admin-reserve-kbytes
     _set_sysctl_option 60-oom.conf vm.oom_kill_allocating_task 1 \
