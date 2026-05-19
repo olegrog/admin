@@ -240,12 +240,12 @@ install_software() {
     [[ $_modified ]] && _restart_daemon sysstat
     _install --collection=Compilers \
         g++ gfortran clang clang-tidy clang-format clang-tools cabal-install cppcheck \
-        libc++-dev libc++abi-dev lldb
+        libc++-dev libc++abi-dev lldb llvm
     _install --collection=Development \
         valgrind git git-lfs subversion cmake flex build-essential doxygen pax-utils ninja-build \
         gcovr google-perftools bazel-bootstrap mercurial elfutils
     _install --collection=Multimedia \
-        ffmpeg imagemagick smpeg-plaympeg libcanberra-gtk-module
+        ffmpeg imagemagick smpeg-plaympeg libcanberra-gtk-module vulkan-tools
     _install --collection=Visualization \
         gnuplot graphviz
     _install --collection="Scientific tools" \
