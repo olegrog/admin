@@ -36,7 +36,7 @@ echo; _topic "GPU status"
 
 printf "%31s | %5s %6s %12s | %16s | %s\n" card_name temp load power memory processes
 printf -- '-%.0s' $(seq 90); printf '\n'
-pdsh gpustat --no-header --color -P --gpuname-width 20 | awk '
+pdsh -w $(_gpu_hosts) gpustat --no-header --color -P --gpuname-width 20 | awk '
 {
     n = split($0, a, " ", b)
     a[1] = sprintf("%-10s", a[1])

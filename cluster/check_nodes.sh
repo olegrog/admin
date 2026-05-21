@@ -37,7 +37,7 @@ find_all_failed_daemons() {
 
 check_drivers() {
     _log "Check ${CYAN}NVidia$WHITE drivers"
-    pdsh 'nvidia-smi > /dev/null || echo "NVidia drivers does not work!"'
+    pdsh -w $(_gpu_hosts) 'nvidia-smi > /dev/null || echo "NVidia drivers does not work!"'
 }
 
 check_ganglia() {

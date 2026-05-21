@@ -30,8 +30,10 @@ _topic() { echo -e "===$YELLOW $* $NC"===; }
 _line() { printf '=%.0s' $(seq -7 ${#1}); printf '\n'; }
 _block() { _line "$1 $2"; echo -e "=== $1 $GREEN$2$NC ==="; _line "$1 $2"; }
 _is_master() { systemctl is-active -q slapd; } # Checks if LDAP server is active
+_has_gpu() { lspci -d 10de: | grep -qE "VGA|3D"; } # `10de` is the NVidia vendor code
 _get_home() { local user=$1; getent passwd "$user" | cut -d: -f6; }
 _get_hosts() { getent -s ldap hosts | awk '{ print $2 }'; }
+_gpu_hosts() { pdsh lspci -d 10de: | grep -E "VGA|3D" | awk -F: '{print $1}' | paste -sd, -; }
 _get_users() { getent -s ldap passwd | awk -F: '{ print $1 }'; }
 _check_if_file_exists() { [[ -f "$1" ]] || _err "File $BLUE$1$RED is absent"; }
 _check_if_dir_exists() { [[ -d "$1" ]] || _err "Directory $BLUE$1$RED is absent"; }

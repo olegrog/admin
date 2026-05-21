@@ -253,16 +253,6 @@ install_software() {
     _install --collection="Development libraries" \
         libboost-all-dev libblas-dev liblapack-dev zlib1g-dev trilinos-all-dev libasio-dev \
         libpng-dev libvtk9-dev
-    debconf-set-selections <<< "nvidia-cudnn nvidia-cudnn/question select I Agree"
-    debconf-set-selections <<< "nvidia-cudnn nvidia-cudnn/license note"
-    _install --collection="CUDA libraries" \
-        nvidia-cuda-toolkit nvidia-cuda-gdb nvidia-cudnn
-    # Permit profiling for all users
-    _append /etc/modprobe.d/cuda.conf 'options nvidia "NVreg_RestrictProfilingToAdminUsers=0"'
-    if [[ $_modified ]]; then
-        update-initramfs -u
-        _log "Reboot is needed"
-    fi
     _install --collection=Octave \
         octave octave-bim octave-data-smoothing octave-divand octave-doc octave-fpl octave-general \
         octave-geometry octave-interval octave-io octave-level-set octave-linear-algebra \
@@ -271,13 +261,26 @@ install_software() {
     _install --collection=Python \
         python3 python3-pip jupyter python-is-python3
     _install --collection="Python libraries" --pip \
-        numpy scipy sympy matplotlib scikit-learn numba pylint flake8 yapf mpi4py \
-        keras tensorflow telegram-send opencv-python
-    _install --collection="PyTorch" --pip torch torchvision torchaudio
-    if [[ $_installed_now ]]; then
-        if [[ $(python -c "import torch; print(torch.cuda.is_available())") != 'True' ]]; then
-            _warn "CUDA is not available for ${MAGENTA}PyTorch$NC"
+        numpy scipy sympy matplotlib scikit-learn numba pylint flake8 yapf mpi4py
+    if _has_gpu; then
+        debconf-set-selections <<< "nvidia-cudnn nvidia-cudnn/question select I Agree"
+        debconf-set-selections <<< "nvidia-cudnn nvidia-cudnn/license note"
+        _install --collection="CUDA libraries" \
+            nvidia-cuda-toolkit nvidia-cuda-gdb nvidia-cudnn
+        # Permit profiling for all users
+        _append /etc/modprobe.d/cuda.conf 'options nvidia "NVreg_RestrictProfilingToAdminUsers=0"'
+        if [[ $_modified ]]; then
+            update-initramfs -u
+            _log "Reboot is needed"
         fi
+        _install --collection="PyTorch" --pip torch torchvision torchaudio
+        if [[ $_installed_now ]]; then
+            if [[ $(python -c "import torch; print(torch.cuda.is_available())") != 'True' ]]; then
+                _warn "CUDA is not available for ${MAGENTA}PyTorch$NC"
+            fi
+        fi
+        _install --collection="Python for GPGPU" --pip \
+            keras tensorflow opencv-python
     fi
     _install --collection=MPI \
         openmpi-common openmpi-bin libopenmpi-dev
@@ -423,10 +426,12 @@ fix_system_bugs() {
     if [[ $_modified ]]; then
         _restart_daemon polkit
     fi
-    # Help tensorflow to find the CUDA libraries
-    # https://discuss.tensorflow.org/t/cant-find-libdevice-directory-cuda-dir-nvvm-libdevice/11896
-    _append /etc/profile.d/tensorflow.sh "export XLA_FLAGS=--xla_gpu_cuda_data_dir=/usr/lib/cuda"
-    _append /etc/bash.bashrc ". /etc/profile.d/tensorflow.sh"
+    if _has_gpu; then
+        # Help tensorflow to find the CUDA libraries
+        # https://discuss.tensorflow.org/t/cant-find-libdevice-directory-cuda-dir-nvvm-libdevice/11896
+        _append /etc/profile.d/tensorflow.sh "export XLA_FLAGS=--xla_gpu_cuda_data_dir=/usr/lib/cuda"
+        _append /etc/bash.bashrc ". /etc/profile.d/tensorflow.sh"
+    fi
 }
 
 if [[ -t 1 ]]; then
@@ -469,7 +474,9 @@ configure_apt
 configure_environment_modules
 configure_shell
 configure_hpc
-install_nvidia_drivers
+if _has_gpu; then
+    install_nvidia_drivers
+fi
 install_software
 install_proprietary_software
 activate_opt_software
