@@ -110,9 +110,11 @@ create_local_home() {
     local dir="$LOCAL_HOME/$user"
     for host in $(_get_hosts); do
         [[ "$(hostname)" == "$host" ]] && continue
-        _log "Make directory $BLUE$dir$WHITE at $GREEN$host$WHITE"
-        ssh "$host" mkdir -p "$dir"
-        ssh "$host" chown -R "$user:$group" "$dir"
+        if ssh "$host" [[ -d $LOCAL_HOME ]]; then
+            _log "Make directory $BLUE$dir$WHITE at $GREEN$host$WHITE"
+            ssh "$host" mkdir -p "$dir"
+            ssh "$host" chown -R "$user:$group" "$dir"
+        fi
     done
 }
 
