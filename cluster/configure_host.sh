@@ -217,8 +217,8 @@ install_software() {
     _install --collection=Repository \
         aptitude software-properties-common snapd
     _install --collection="from Snap" --snap \
-        chromium slack telegram-desktop vlc shellcheck julia clion codium firefox code aws-cli \
-        nvim sublime-text
+        chromium slack telegram-desktop vlc shellcheck julia codium firefox code aws-cli nvim \
+        sublime-text
     _refresh_snap julia edge
     _install --collection="Remote desktop" \
         ubuntu-gnome-desktop xrdp tigervnc-standalone-server xfce4-session
