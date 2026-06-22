@@ -66,17 +66,18 @@ check_ganglia() {
 }
 
 check_slurm() {
+    local config="/etc/slurm/slurm.conf"
     _log "Check whether nodes are in ${CYAN}SLURM$WHITE"
-    for host in $(_get_hosts); do
+    while read -r host; do
         if ! sinfo --Node | grep -Fq "$host"; then
             _warn "Host $GREEN$host$RED is out of list"
             if [[ $fix ]]; then
                 _log "Trying to activate it"
-                ssh "$host" systemctl restart slurmd
+                ssh -n "$host" systemctl restart slurmd
                 sinfo --Node | grep "$host"
             fi
         fi
-    done
+    done < <(awk -F'[= ]' '/^NodeName=/ && !/FUTURE/ {print $2}' "$config")
     for host in $(sinfo --Node | grep down | cut -f1 -d' '); do
         _warn "Host $GREEN$host$RED is down"
         if [[ $fix ]]; then
