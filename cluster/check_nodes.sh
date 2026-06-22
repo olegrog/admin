@@ -25,6 +25,17 @@ for arg; do case $arg in
     *)                  echo "Unknown argument '$arg'."; print_help;;
 esac; done
 
+check_free_space() {
+    local threshold=50 # Gb
+    local host free_space
+    _log "Check whether enough disk space is available"
+    while read -r host free_space; do
+        if [ "$free_space" -lt $threshold ]; then
+            _warn "Only $free_space GB of disk space left on $GREEN$host$RED"
+        fi
+    done < <(pdsh 'df -BG / | tail -n 1' | sed 's/[G:]//g' | awk '{print $1, $5}')
+}
+
 find_all_failed_daemons() {
     _log "Check whether all daemons are not failed"
     if pdsh 'systemctl list-units --state=failed' | grep failed; then
@@ -37,7 +48,7 @@ find_all_failed_daemons() {
 
 check_drivers() {
     _log "Check ${CYAN}NVidia$WHITE drivers"
-    pdsh -w $(_gpu_hosts) 'nvidia-smi > /dev/null || echo "NVidia drivers does not work!"'
+    pdsh -w "$(_gpu_hosts)" 'nvidia-smi > /dev/null || echo "NVidia drivers does not work!"'
 }
 
 check_ganglia() {
@@ -45,7 +56,7 @@ check_ganglia() {
     readarray -t ghosts < <(gstat -al1 | cut -f1 -d' ')
     for host in $(_get_hosts); do
         if [[ ! " ${ghosts[*]} " == *" $host "* ]]; then
-            _warn "Ganglia monitor doesn't work at $GREEN$host$RED"
+            _warn "Ganglia monitor doesn't work on $GREEN$host$RED"
             if [[ $fix ]]; then
                 _log "Trying to restart"
                 ssh "$host" systemctl restart ganglia-monitor
@@ -120,6 +131,7 @@ check_systemd() {
 }
 
 _check_host_reachability
+check_free_space
 find_all_failed_daemons
 check_drivers
 check_ganglia
@@ -130,6 +142,7 @@ check_systemd
 
 if [[ "$_nwarnings" -gt 0 && ! $fix ]]; then
     _topic "$_nwarnings check(s) failed. Try to run with -f"
+    exit "$_nwarnings"
 else
     _topic "All checks passed"
 fi
