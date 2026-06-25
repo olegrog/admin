@@ -25,30 +25,63 @@ for arg; do case $arg in
     *)                  echo "Unknown argument '$arg'."; print_help;;
 esac; done
 
+declare -r DISK_FREESPACE_THRESHOLD=50 # Gb
+
 check_free_space() {
-    local threshold=50 # Gb
     local host free_space
     _log "Check whether enough disk space is available"
     while read -r host free_space; do
-        if [ "$free_space" -lt $threshold ]; then
+        if [ "$free_space" -lt $DISK_FREESPACE_THRESHOLD ]; then
             _warn "Only $free_space GB of disk space left on $GREEN$host$RED"
         fi
     done < <(pdsh 'df -BG / | tail -n 1' | sed 's/[G:]//g' | awk '{print $1, $5}')
 }
 
-find_all_failed_daemons() {
-    _log "Check whether all daemons are not failed"
-    if pdsh 'systemctl list-units --state=failed' | grep failed; then
-        if [[ $fix ]]; then
-            _log "Trying to reset them"
-            pdsh 'systemctl reset-failed'
-        fi
-    fi
-}
-
 check_drivers() {
     _log "Check ${CYAN}NVidia$WHITE drivers"
-    pdsh -w "$(_gpu_hosts)" 'nvidia-smi > /dev/null || echo "NVidia drivers does not work!"'
+    for line in $(pdsh -w "$(_gpu_hosts)" 'nvidia-smi > /dev/null || echo $?' | sed 's/:.*//'); do
+        _warn "NVidia drivers does not work on $GREEN$host$RED"
+    done
+}
+
+check_systemd() {
+    local host stat
+    local -a hosts
+    _log "Check systemd status"
+    while read -r host stat; do
+        _warn "Systemd is $stat on $GREEN$host$RED"
+    done < <(pdsh 'systemctl is-system-running' | grep -v running | sed 's/://')
+
+    _log "Check whether systemd units are not broken"
+    while read -r host unit state; do
+        _warn "Service $CYAN$unit$RED is $state on $GREEN$host$RED"
+        if [[ $fix ]]; then
+            if [[ "$state" == 'failed' ]]; then
+                if [[ ! " $hosts " == *" $host "* ]]; then
+                    hosts+=("$host")
+                    _log "Trying to reset failed units"
+                    ssh -n "$host" systemctl reset-failed
+                fi
+            fi
+        fi
+    done < <(pdsh 'systemctl list-units --no-legend --state=failed,auto-restart' | sed 's/://' \
+        | awk '{print $1, $2, $4}')
+}
+
+check_daemons() {
+    local hosts
+    for daemon in "$@"; do
+        _log "Check whether $CYAN$daemon$WHITE is active"
+        hosts=$(pdsh "systemctl is-active $daemon" | grep inactive | cut -f1 -d:)
+        for host in $hosts; do
+            _warn "Daemon $daemon is not active on $GREEN$host$RED"
+            if [[ $fix ]]; then
+                _log "Trying to restart $CYAN$daemon$WHITE on $GREEN$host$WHITE"
+                #shellcheck disable=SC2029
+                ssh "$host" systemctl restart "$daemon"
+            fi
+        done
+    done
 }
 
 check_ganglia() {
@@ -103,43 +136,14 @@ check_snap()
     done
 }
 
-check_daemons() {
-    local hosts
-    for daemon in "$@"; do
-        _log "Check whether $CYAN$daemon$WHITE is active"
-        hosts=$(pdsh "systemctl is-active $daemon" | grep inactive | cut -f1 -d:)
-        if [[ $fix ]]; then
-            for host in $hosts; do
-                _log "Trying to restart $CYAN$daemon$WHITE on $GREEN$host$WHITE"
-                #shellcheck disable=SC2029
-                ssh "$host" systemctl restart "$daemon"
-            done
-        fi
-    done
-}
-
-check_systemd() {
-    local host stat not_running
-    _log "Check ${CYAN}systemd$WHITE status"
-    readarray -t not_running < <(pdsh SYSTEMD_COLORS=1 systemctl status \
-        | grep --color=no ': *State' | grep -v running)
-    for line in "${not_running[@]}"; do
-        host=${line%%:*}
-        stat=${line##* }
-        echo -e "$GREEN$host$NC is $stat and has the following dead units:"
-        ssh "$host" systemctl list-units | grep dead | awk '{print " -- "$1}'
-    done
-}
-
 _check_host_reachability
 check_free_space
-find_all_failed_daemons
 check_drivers
-check_ganglia
+check_systemd
 check_daemons teamviewerd anydesk slurmd
+check_ganglia
 check_slurm
 check_snap
-check_systemd
 
 if [[ "$_nwarnings" -gt 0 && ! $fix ]]; then
     _topic "$_nwarnings check(s) failed. Try to run with -f"
