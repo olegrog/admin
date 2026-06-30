@@ -252,7 +252,7 @@ install_software() {
         gmsh hdf5-tools openbabel
     _install --collection="Development libraries" \
         libboost-all-dev libblas-dev liblapack-dev zlib1g-dev trilinos-all-dev libasio-dev \
-        libpng-dev libvtk9-dev
+        libpng-dev libvtk9-dev libgoogle-perftools-dev libotf2-trace-dev
     _install --collection=Octave \
         octave octave-bim octave-data-smoothing octave-divand octave-doc octave-fpl octave-general \
         octave-geometry octave-interval octave-io octave-level-set octave-linear-algebra \
