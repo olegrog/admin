@@ -212,6 +212,10 @@ install_nvidia_drivers() {
 
 install_software() {
     _topic "Install software"
+    local kernel_version
+    kernel_version=$(dpkg-query --list "linux-image-*" | grep "^ii" | \
+        grep -oE "[0-9][0-9\.-]+-generic"  | sort -V | tail -1)
+
     _install --collection=Auxiliary \
         ack ripgrep vim ranger tcl kdiff3 meld locate tldr tmux at pv source-highlight mc jq
     _install --collection=Repository \
@@ -228,7 +232,7 @@ install_software() {
     debconf-set-selections <<< "postfix postfix/mailname string $(hostname).$DOMAIN_NAME"
     _install --collection=Diagnostic \
         htop pdsh clusterssh ganglia-monitor ncdu nmap mesa-utils mailutils net-tools gpustat \
-        lm-sensors glances sysstat acct linux-tools-generic fio nvtop cpu-x
+        lm-sensors glances sysstat acct linux-tools-"$kernel_version" fio nvtop cpu-x
     # Configure pdsh
     _append /etc/profile.d/pdsh.sh "export PDSH_RCMD_TYPE=ssh" "export WCOLL=$CONFIG/hosts"
     _append /etc/bash.bashrc ". /etc/profile.d/pdsh.sh"
