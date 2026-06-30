@@ -21,6 +21,7 @@ declare -xr CONFIG=/opt/_config
 declare -xr DISTRIB=/opt/_distrib
 declare -xr MODULES=/opt/modules
 declare -xr LOCAL_HOME=/home-local
+declare -xr SWAP_SIZE=2G
 
 _log() { echo -e "--$WHITE $*.$NC"; }
 _err() { echo -e "$RED$*!$NC" >&2; exit 1; }

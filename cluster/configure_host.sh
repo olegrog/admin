@@ -6,6 +6,54 @@ source "$(dirname "$0")/common.sh"
 [[ $# -eq 0 ]] || { echo "Usage: ./$(basename "$0")"; exit 1; }
 [[ "$HOME" == /root ]] || _err "Run with sudo -H"
 
+
+configure_swap() {
+    _topic "Configure swap"
+    local swapfile=/swapfile
+    local swap_changed
+    local file type size
+    read -r file type size <<< "$(swapon --show --raw --noheadings | awk '{ print $1, $2, $3; }')"
+    if [[ -n $type && $type != file ]]; then
+        _warn "Swap space is not stored in a file"
+        swapon --show
+        return
+    fi
+    if [[ -n $size && $size != "$SWAP_SIZE" ]]; then
+        _log "Deactivate swap since its size $size is not equal to $SWAP_SIZE"
+        swapoff "$file"
+        rm "$file"
+        _remove_line /etc/fstab "$file"
+        unset file size
+    fi
+    if [[ -n $file && $file != "$swapfile" ]]; then
+        _log "Rename the swap file $BLUE$file$WHITE to $BLUE$swapfile$WHITE"
+        swapoff "$file"
+        mv "$file" "$swapfile"
+        swapon "$swapfile"
+        sed -i "s:$file:$swapfile:" /etc/fstab
+        swap_changed=1
+    fi
+    if [[ -z "$size" ]]; then
+        _log "Initialize $BLUE$swapfile$WHITE"
+        [[ -f "$swapfile" ]] && _log "Rewrite an existing unused swap file"
+        fallocate -l $SWAP_SIZE "$swapfile"
+        chmod 600 "$swapfile"
+        mkswap "$swapfile"
+        swapon "$swapfile"
+        _append /etc/fstab "$swapfile\tnone\tswap\tsw\t0\t0"
+        swap_changed=1
+    fi
+    if [[ $swap_changed ]]; then
+        if swapon --show | tee /dev/stderr | grep -q .; then
+            _log "Swap is activated successfully"
+        else
+            _err "Swap is not activated"
+        fi
+    fi
+    _set_sysctl_option 99-swappiness.conf vm.swappiness 10 \
+        "Do not use swap until RAM is 90% full"
+}
+
 configure_ssh() {
     _topic "Configure SSH"
     _install openssh-server
@@ -450,6 +498,7 @@ if _is_master; then
 else
     configure_memory_management '90%' '95%'
 fi
+configure_swap
 configure_ssh
 configure_ldap
 if ! _is_master; then
