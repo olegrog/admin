@@ -64,8 +64,8 @@ check_systemd() {
                 fi
             fi
         fi
-    done < <(pdsh 'systemctl list-units --no-legend --state=failed,auto-restart' | sed 's/://' \
-        | awk '{print $1, $2, $4}')
+    done < <(pdsh 'systemctl list-units --plain --no-legend --state=failed,auto-restart' \
+        | sed 's/://' | awk '{print $1, $2, $4}')
 }
 
 check_daemons() {
