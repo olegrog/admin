@@ -31,6 +31,7 @@ download() {
     local dir=$1
     local url=$2
     if [[ ! -d "$dir" ]]; then
+        [[ $url == *.tgz ]] && ! wget -q --spider "$url" && url="${url%.tgz}.tar.gz"
         _log "Download $BLUE$url$WHITE"
         wget -q --show-progress -O - "$url" | tar -xz -C "$DIR"
         rename "s:$dir.*:$dir:" "$dir"*
