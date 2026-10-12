@@ -456,6 +456,15 @@ activate_opt_software() {
         '  Option "IndirectGLX" "on"' 'EndSection'
 }
 
+disable_unused_services() {
+    _topic "Disable unused services"
+    if [[ "$(systemctl is-enabled apport)" == enabled ]]; then
+        _log "Ubuntu's automatic crash reporting tool is disabled"
+        sed -i 's/^enabled *= *1/enabled=0/' /etc/default/apport
+        systemctl disable apport
+    fi
+}
+
 fix_system_bugs() {
     _topic "Fix known unresolved system bugs"
     # https://unix.stackexchange.com/a/496519/364211
@@ -518,6 +527,7 @@ fi
 install_software
 install_proprietary_software
 activate_opt_software
+disable_unused_services
 fix_system_bugs
 
 _topic "Update database for mlocate"
