@@ -49,6 +49,7 @@ download "$THIRD_PARTY_DIR" "$tp_url"
 (
     cd "$OPENFOAM_DIR" || _err "Directory $BLUE$OPENFOAM_DIR$RED is missing"
     [[ -f etc/bashrc ]] || _err "File $BLUE$(pwd)/etc/bashrc$RED is missing"
+    # shellcheck source=/dev/null
     . etc/bashrc
     if command -v icoFoam > /dev/null; then
         _log "${MAGENTA}OpenFOAM-$of_version$WHITE is already built"
@@ -68,13 +69,17 @@ else
         if grep -q 'GMP_ARCH_PATH *#' "$cgal_file"; then
             # Till v2506
             _log "Fix $BLUE$cgal_file$WHITE"
+            # shellcheck disable=SC2016
             sed -i 's/\$GMP_ARCH_PATH/& || true/' "$cgal_file"
+            # shellcheck disable=SC2016
             sed -i 's/\$MPFR_ARCH_PATH/& || true/' "$cgal_file"
         fi
         if grep -q 'GMP_ARCH_PATH" *#' "$cgal_file"; then
             # Since v2506
             _log "Fix $BLUE$cgal_file$WHITE"
+            # shellcheck disable=SC2016
             sed -i 's/"\$GMP_ARCH_PATH"/& || true/' "$cgal_file"
+            # shellcheck disable=SC2016
             sed -i 's/"\$MPFR_ARCH_PATH"/& || true/' "$cgal_file"
         fi
     fi
@@ -92,6 +97,7 @@ else
     echo "family foam" >> "$module_file"
     sed -i "s:/home/$ADMIN:\$env(HOME):g" "$module_file"
     sed -i "s:$ADMIN:\$env(USER):g" "$module_file"
+    # shellcheck disable=SC2016
     sed -i '/\$env/{s/[{}]//g}' "$module_file"
 fi
 

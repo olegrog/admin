@@ -13,6 +13,7 @@ install_docker() {
     local docker_repo="https://download.docker.com/linux/ubuntu"
     local dpkg_arch ubuntu_codename
     dpkg_arch=$(dpkg --print-architecture)
+    # shellcheck source=/dev/null
     ubuntu_codename=$(. /etc/os-release && echo "$VERSION_CODENAME")
 
     mkdir -p /etc/apt/keyrings
