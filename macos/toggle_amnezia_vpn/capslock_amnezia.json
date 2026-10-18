@@ -1,0 +1,23 @@
+{
+    "title": "AmneziaVPN",
+    "rules": [
+        {
+            "description": "Caps Lock: toggle AmneziaVPN",
+            "manipulators": [
+                {
+                    "type": "basic",
+                    "from": {
+                        "key_code": "caps_lock",
+                        "modifiers": { "optional": ["any"] }
+                    },
+                    "to": [
+                        {
+                            "shell_command": "/usr/bin/osascript \"$HOME/.config/karabiner/toggle_amnezia.applescript\"",
+                            "repeat": false
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}
