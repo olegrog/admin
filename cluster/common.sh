@@ -240,6 +240,14 @@ _restart_daemon() {
     systemctl restart "$service"
 }
 
+_disable_daemon() {
+    local service=$1
+    if systemctl --quiet is-enabled "$service"; then
+        _log "Disable daemon $CYAN$service$WHITE"
+        systemctl disable --now "$service"
+    fi
+}
+
 _restart_daemon_on_slave_hosts() {
     local service=$1
     for host in $(_get_hosts); do

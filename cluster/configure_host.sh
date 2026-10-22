@@ -458,10 +458,17 @@ activate_opt_software() {
 
 disable_unused_services() {
     _topic "Disable unused services"
-    if [[ "$(systemctl is-enabled apport)" == enabled ]]; then
+    _disable_daemon apport
+    if grep -Fq "^enabled *= *1" /etc/default/apport; then
+        # Legacy way to stop apport
         _log "Ubuntu's automatic crash reporting tool is disabled"
         sed -i 's/^enabled *= *1/enabled=0/' /etc/default/apport
-        systemctl disable apport
+    fi
+    if [[ -f /var/lib/apport/autoreport ]]; then
+        _log "Remove current queue of crash reports"
+        rm -f /var/lib/apport/autoreport
+        systemctl stop apport-autoreport
+        systemctl reset-failed apport-autoreport
     fi
 }
 
