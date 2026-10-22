@@ -233,6 +233,8 @@ configure_slurm() {
     [[ $_modified ]] && _restart_daemon munge
     _symlink /etc/slurm/slurm.conf
     [[ $_modified ]] && { sleep 1; _restart_daemon slurmd; }
+    _symlink /etc/slurm/task_prolog.sh
+    [[ $_modified ]] && scontrol reconfigure
     _postpone_daemon_after_mount slurmd $CONFIG
     # TODO(olegrog): we have to resume host manually
     _add_cron "@reboot sleep 100 && /usr/bin/scontrol update nodename=$(hostname) state=idle"
@@ -279,7 +281,7 @@ install_software() {
     debconf-set-selections <<< "postfix postfix/mailname string $(hostname).$DOMAIN_NAME"
     _install --collection=Diagnostic \
         htop pdsh clusterssh ganglia-monitor ncdu nmap mesa-utils mailutils net-tools gpustat \
-        lm-sensors glances sysstat acct linux-tools-"$kernel_version" fio nvtop cpu-x
+        lm-sensors glances sysstat acct linux-tools-"$kernel_version" fio nvtop cpu-x stress-ng
     # Configure pdsh
     _append /etc/profile.d/pdsh.sh "export PDSH_RCMD_TYPE=ssh" "export WCOLL=$CONFIG/hosts"
     _append /etc/bash.bashrc ". /etc/profile.d/pdsh.sh"
