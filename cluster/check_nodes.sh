@@ -111,7 +111,7 @@ check_slurm() {
             fi
         fi
     done < <(awk -F'[= ]' '/^NodeName=/ && !/FUTURE/ {print $2}' "$config")
-    for host in $(sinfo --Node | grep down | cut -f1 -d' '); do
+    for host in $(sinfo --Node | grep -E 'down|drain' | cut -f1 -d' '); do
         _warn "Host $GREEN$host$RED is down"
         if [[ $fix ]]; then
             _log "Trying to wake it"
