@@ -6,15 +6,32 @@ source "$(dirname "$0")/common.sh"
 date
 _topic "Processes with high CPU load"
 
-columns="pcpu,pmem,user:15,args:45,etime,state"
-ps -o "$columns" | head -1 # print a header only
-pdsh ps --no-headers -eo "etimes,$columns" --sort -etime | awk '
+pdsh ps --no-headers -eo ppid,etimes,pcpu,pmem,user:15,etime,state,comm --sort -etime |
+awk -v white="$WHITE" -v nc="$NC" '
+BEGIN {
+    fmt = "%7s %5s %5s %-15s %-20.20s %10s %s\n"
+    printf fmt, "%CPU", "NPROC", "%MEM", "USER", "COMMAND", "ELAPSED", "STATE"
+}
 {
-    if ($2 > 10 && $3 > 10) {
-        if (h != $1) print "'"$WHITE"'"$1"'"$NC"'"
-        h=$1
-        sub(/[a-z]*: *[0-9]* /, "")
-        print
+    key = $1 SUBSEP $2 SUBSEP $6 SUBSEP $9
+    if (!(key in cpu)) {
+        order[++n] = key
+        row[key] = $0
+    }
+    cpu[key] += $4
+    mem[key] += $5
+    count[key]++
+}
+END {
+    for (i = 1; i <= n; i++) {
+        key = order[i]
+        split(row[key], a)
+        if (a[3] <= 10 || cpu[key] <= 10) continue
+        if (host != a[1]) print white a[1] nc
+        host = a[1]
+        total_cpu = sprintf("%.1f", cpu[key])
+        total_mem = sprintf("%.1f", mem[key])
+        printf fmt, total_cpu, count[key], total_mem, a[6], a[9], a[7], a[8]
     }
 }'
 
