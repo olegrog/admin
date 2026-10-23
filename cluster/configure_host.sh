@@ -234,7 +234,7 @@ configure_slurm() {
     _symlink /etc/slurm/slurm.conf
     [[ $_modified ]] && { sleep 1; _restart_daemon slurmd; }
     _symlink /etc/slurm/task_prolog.sh
-    [[ $_modified ]] && scontrol reconfigure
+    _symlink /etc/slurm/cgroup.conf
     _postpone_daemon_after_mount slurmd $CONFIG
     # TODO(olegrog): we have to resume host manually
     _add_cron "@reboot sleep 100 && /usr/bin/scontrol update nodename=$(hostname) state=idle"
