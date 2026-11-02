@@ -1,0 +1,46 @@
+#!/bin/bash
+set +x
+set -euo pipefail
+
+if [[ $# -gt 1 || ( $# -eq 1 && $1 != --check ) ]]; then
+    printf 'Usage: sk [--check]\n' >&2
+    exit 64
+fi
+if [[ $# -eq 0 ]] &&
+    /Library/PrivilegedHelperTools/local.vpn-coexist/vpn-coexist --inspect skoltech.ru 2>/dev/null |
+    /usr/bin/plutil -extract address raw -o - - >/dev/null 2>&1; then
+    printf 'You are on the Skoltech LAN. VPN is not needed.\n'
+    exit 0
+fi
+if [[ ! -x /Library/PrivilegedHelperTools/local.sk-vpn/connect || ! -x /Library/PrivilegedHelperTools/local.sk-vpn/runtime/openconnect ]]; then
+    printf 'Install the protected Skoltech VPN helper first.\n' >&2
+    exit 69
+fi
+base=/Library/PrivilegedHelperTools/local.sk-vpn
+account=$(/usr/bin/awk -F= '$1 == "user" { print substr($0, 6); exit }' "$base/openconnect.conf")
+[[ -n $account ]] || { printf 'Missing user in %s/openconnect.conf\n' "$base" >&2; exit 65; }
+password=$(/usr/bin/security find-generic-password \
+    -a "$account" -s local.sk-vpn.vpn.skoltech.ru -w \
+    "$HOME/Library/Keychains/login.keychain-db") || exit $?
+trap 'unset password auth_result' EXIT
+if [[ -z $password ]]; then
+    printf 'The Skoltech VPN Keychain password is empty.\n' >&2
+    exit 65
+fi
+
+if [[ ${1:-} == --check ]]; then
+    # Authentication only: no interface, route, or DNS changes; cookie stays in memory.
+    auth_result=$(printf '%s\n' "$password" |
+        /Library/PrivilegedHelperTools/local.sk-vpn/runtime/openconnect \
+        --authenticate --passwd-on-stdin --no-system-trust \
+        --config="$base/openconnect.conf" \
+        --csd-wrapper=/usr/bin/false vpn.skoltech.ru) || exit $?
+    if [[ $auth_result != *COOKIE=* ]]; then
+        printf 'The VPN server did not return an authentication cookie.\n' >&2
+        exit 69
+    fi
+    printf 'VPN authentication succeeded; routing and DNS were unchanged.\n'
+else
+    # sudo cannot prompt or consume the VPN password as an administrator password.
+    printf '%s\n' "$password" | /usr/bin/sudo -n /Library/PrivilegedHelperTools/local.sk-vpn/connect
+fi

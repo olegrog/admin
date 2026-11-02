@@ -1,4 +1,11 @@
+# Hidden files
 .*
-*.pem
-*.ldif
-*.jpg
+
+# Backup files
+*~
+*.bak
+*.swp
+
+# Build files
+build*/
+__pycache__/
