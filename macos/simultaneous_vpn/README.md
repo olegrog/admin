@@ -86,8 +86,8 @@ in the login Keychain. In Keychain Access, add a password item with:
 - Password: your VPN password
 
 Put `~/.local/bin` in PATH and remove any older `sk` alias. Run `sk`; stop with
-Ctrl-C. On the Skoltech LAN it reports that VPN is unnecessary. `sk --check`
-tests authentication without a tunnel; Keychain may ask for access on first use.
+Ctrl-C. The VPN stops automatically on the Skoltech LAN. `sk --check` tests
+authentication without a tunnel; Keychain may ask for access on first use.
 
 Both Homebrew locations are supported. To select a client explicitly, run
 `python3 sk/build.py --openconnect PATH`. The build copies OpenConnect and its

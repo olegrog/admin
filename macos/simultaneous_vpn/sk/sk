@@ -6,11 +6,27 @@ if [[ $# -gt 1 || ( $# -eq 1 && $1 != --check ) ]]; then
     printf 'Usage: sk [--check]\n' >&2
     exit 64
 fi
-if [[ $# -eq 0 ]] &&
-    /Library/PrivilegedHelperTools/local.vpn-coexist/vpn-coexist --inspect skoltech.ru 2>/dev/null |
+vpn_pid=
+stop_vpn() {
+    if [[ -n $vpn_pid ]]; then
+        # sudo forwards SIGTERM to OpenConnect, which removes its routes and DNS.
+        kill -TERM "$vpn_pid" 2>/dev/null || true
+        wait "$vpn_pid" 2>/dev/null || true
+        vpn_pid=
+    fi
+}
+
+exit_on_campus() {
+    if /Library/PrivilegedHelperTools/local.vpn-coexist/vpn-coexist --inspect skoltech.ru 2>/dev/null |
     /usr/bin/plutil -extract address raw -o - - >/dev/null 2>&1; then
-    printf 'You are on the Skoltech LAN. VPN is not needed.\n'
-    exit 0
+        stop_vpn
+        printf 'You are on the Skoltech LAN. VPN is not needed.\n'
+        exit 0
+    fi
+}
+
+if [[ $# -eq 0 ]]; then
+    exit_on_campus
 fi
 if [[ ! -x /Library/PrivilegedHelperTools/local.sk-vpn/connect || ! -x /Library/PrivilegedHelperTools/local.sk-vpn/runtime/openconnect ]]; then
     printf 'Install the protected Skoltech VPN helper first.\n' >&2
@@ -41,6 +57,23 @@ if [[ ${1:-} == --check ]]; then
     fi
     printf 'VPN authentication succeeded; routing and DNS were unchanged.\n'
 else
+    trap 'stop_vpn; unset password auth_result' EXIT
+    trap 'exit 130' INT
+    trap 'exit 143' TERM
+    trap 'exit 129' HUP
+
     # sudo cannot prompt or consume the VPN password as an administrator password.
-    printf '%s\n' "$password" | /usr/bin/sudo -n /Library/PrivilegedHelperTools/local.sk-vpn/connect
+    printf '%s\n' "$password" | /usr/bin/sudo -n /Library/PrivilegedHelperTools/local.sk-vpn/connect &
+    vpn_pid=$!
+    unset password
+    while kill -0 "$vpn_pid" 2>/dev/null; do
+        exit_on_campus
+        sleep 5
+    done
+    status=0
+    wait "$vpn_pid" || status=$?
+    vpn_pid=
+    # The tunnel may have exited during the network change before our next check.
+    exit_on_campus
+    exit "$status"
 fi
