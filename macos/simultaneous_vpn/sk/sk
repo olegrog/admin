@@ -6,6 +6,16 @@ if [[ $# -gt 1 || ( $# -eq 1 && $1 != --check ) ]]; then
     printf 'Usage: sk [--check]\n' >&2
     exit 64
 fi
+base=/Library/PrivilegedHelperTools/local.sk-vpn
+# The shell keeps fd 9 open; its kernel lock is released automatically on exit.
+umask 077
+exec 9>>"$HOME/Library/Caches/local.sk-vpn.lock"
+if ! /usr/bin/python3 -I -S -c \
+    'import fcntl; fcntl.flock(9, fcntl.LOCK_EX | fcntl.LOCK_NB)' 2>/dev/null ||
+    /usr/bin/pgrep -f '^/Library/PrivilegedHelperTools/local\.sk-vpn/runtime/openconnect([[:space:]]|$)' >/dev/null; then
+    printf 'sk is already running.\n' >&2
+    exit 75
+fi
 vpn_pid=
 stop_vpn() {
     if [[ -n $vpn_pid ]]; then
@@ -32,7 +42,6 @@ if [[ ! -x /Library/PrivilegedHelperTools/local.sk-vpn/connect || ! -x /Library/
     printf 'Install the protected Skoltech VPN helper first.\n' >&2
     exit 69
 fi
-base=/Library/PrivilegedHelperTools/local.sk-vpn
 account=$(/usr/bin/awk -F= '$1 == "user" { print substr($0, 6); exit }' "$base/openconnect.conf")
 [[ -n $account ]] || { printf 'Missing user in %s/openconnect.conf\n' "$base" >&2; exit 65; }
 password=$(/usr/bin/security find-generic-password \
