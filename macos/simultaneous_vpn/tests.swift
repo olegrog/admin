@@ -54,6 +54,12 @@ func selfTest() {
   let repaired = planRoutes(owned: [], current: [oldEndpoint, unrelated], desired: endpoints, stale: stale)
   precondition(repaired.remove == [oldEndpoint] && repaired.add == endpoints && repaired.conflicts.isEmpty)
   precondition(staleDirectRoutes(endpoints, desired: endpoints, lans: [home]).isEmpty)
+  // OpenConnect adds a host route alongside our identical /32 network route.
+  let duplicates = parseRoutes("83.69.192.101 192.168.1.1 UGHS en0\n83.69.192.101/32 192.168.1.1 UGSc en0")
+  let duplicatePlan = planRoutes(owned: endpoints, current: duplicates, desired: endpoints)
+  precondition(duplicatePlan.add.isEmpty && duplicatePlan.remove.isEmpty && duplicatePlan.conflicts.isEmpty)
+  let otherGateway = Route(network: endpoints[0].network, gateway: "192.168.1.2", interface: "en0")
+  precondition(planRoutes(owned: endpoints, current: duplicates + [otherGateway], desired: endpoints).conflicts == [endpoints[0].network])
   let switchedEndpoints = directHostRoutes(sk.endpoints, lans: [office])
   let switchedPlan = planRoutes(owned: endpoints, current: endpoints, desired: switchedEndpoints)
   precondition(switchedPlan.remove == endpoints && switchedPlan.add == switchedEndpoints)

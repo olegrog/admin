@@ -344,7 +344,7 @@ func planRoutes(owned: [Route], current: [Route], desired: [Route] = [], stale: 
   var conflicts: [String] = []
   for route in desired {
     let existing = remaining.filter { $0.network == route.network }
-    if existing.isEmpty { add.append(route) } else if existing != [route] { conflicts.append(route.network) }
+    if existing.isEmpty { add.append(route) } else if existing.contains(where: { $0 != route }) { conflicts.append(route.network) }
   }
   return RoutePlan(remove: remove, add: add, conflicts: conflicts)
 }
