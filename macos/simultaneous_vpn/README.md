@@ -1,140 +1,169 @@
 # Simultaneous VPNs on macOS
 
-Use an internet VPN, institutional VPNs and the current LAN together.
-VPN clients establish tunnels and supply their routes and DNS. An updater
-keeps local routes and DNS consistent as you change networks.
+Use an internet VPN, Skoltech VPN, FRCCSC VPN and the current LAN together.
+LAN names use DHCP DNS; institutional names use their LAN or VPN DNS.
+Public names use configured DNS routed through the internet VPN, falling back
+to LAN DNS when no eligible tunnel route exists and no full tunnel is active.
+Routes and DNS refresh every five seconds. IPv4 only; Bonjour `.local` stays
+with macOS.
 
-| Current LAN | Skoltech | FRCCSC |
-| --- | --- | --- |
-| Home/other | `sk` | OpenVPN Connect |
-| Skoltech | Direct | OpenVPN Connect |
-| FRCCSC | `sk` | Direct |
+## Installation
 
-Run institutional VPNs when off site. Leave the internet VPN connected.
-
-## Install
-
-Requires macOS 14+, Homebrew and Xcode Command Line Tools
-(`xcode-select --install` if missing). From this directory:
+Requires macOS 14+, Homebrew, Python 3 and Xcode Command Line Tools.
+Run commands from this directory as your normal user, using sudo where shown.
+Remove an older installation with its original installer first.
 
 ```sh
-brew install dnsmasq
-./setup.sh build
+xcode-select -p                 # if missing: xcode-select --install
+brew install dnsmasq openconnect
+./setup.sh build                # compiles and runs offline tests
 sudo ./setup.sh install
 ```
 
-Build on each recipient's Mac as your normal user. Installation registers
-dnsmasq and an updater that launchd runs every five seconds.
-Do not start another dnsmasq service.
-The installer refuses an existing installation; remove it with its original
-installer before replacing it. VPN apps, profiles and credentials are separate.
+The installer starts its own dnsmasq on `127.0.0.1:53`; do not run another there.
+Keep normal DNS server addresses in your VPN client. The helper publishes
+localhost DNS itself after checking that dnsmasq responds.
 
-## Configure
+For `sk`, first of all, set your login and the certificate pin confirmed by IT:
 
-Edit `config.json` before installation:
+```sh
+cp sk/openconnect.conf.example sk/openconnect.conf
+vim sk/openconnect.conf
+```
 
-- `vpn_dns`: public/provider DNS addresses routed through the internet VPN.
-- `networks`: each institution's domain, VPN server `endpoints`, and private
-  `routes` to use directly when inside its LAN.
-- `lan`: identify that LAN by `dhcp_server` or a DNS `probe` under its domain.
-  Omit this field for a VPN-only network.
+Then build and install the openconnect wrapper:
 
-DHCP matching also checks the domain and address range. A probe must return a
-private IPv4 address from LAN DNS. Current/home LANs are discovered automatically.
-After a probe times out, its last successful match is retained for up to one minute.
-Local names and reverse queries use LAN DNS; institutional names use their
-published VPN DNS or detected LAN DNS. Public names use configured DNS whose
-routes lead through a tunnel. Without such a route and without a full tunnel,
-public names use LAN DNS. A full tunnel with no eligible DNS produces an error.
+```sh
+./setup.sh build sk
+sudo ./setup.sh install sk
+mkdir -p ~/.local/bin
+install -m 700 sk/sk ~/.local/bin/sk
+export PATH="$HOME/.local/bin:$PATH"
+```
 
-In your internet VPN, allow LAN access and DNS to localhost, LAN and institutional
-servers. Exclude the institutional VPN **server endpoints**; route `vpn_dns`
-through the internet VPN. Permanent institutional subnet exclusions are
-unnecessary: the updater adds direct routes only on the corresponding LAN.
-Client kill switches must permit these exceptions.
+Add the last line to your shell startup file if needed.
+Store the password in the login Keychain as your normal user, or retain the
+existing matching item. Confirm that the default Keychain is `login.keychain-db`:
 
-For AmneziaVPN, add `"firewall": "amnezia"` at the top level to maintain narrow
-exceptions in its existing firewall tables. This never loads or flushes rules.
-Other clients use their own LAN/DNS exceptions; omit `firewall` for them.
+```sh
+security default-keychain -d user
+account=$(sed -n 's/^user=//p' sk/openconnect.conf)
+security add-generic-password -U -a "$account" \
+  -s local.sk-vpn.vpn.skoltech.ru -w
+unset account
+```
 
-For FRCCSC, import your issued profile into OpenVPN Connect with:
+Enter the password at the hidden prompt.
+
+Run `sk` off campus; stop with Ctrl-C. It stops automatically on campus.
+Only one instance, including `sk --check`, can run at a time.
+Connect FRCCSC in OpenVPN Connect when outside its LAN. Leave the internet VPN
+connected. The fixed sudo rule permits only the protected OpenConnect wrapper,
+without arguments, so `sk` needs no administrator prompt.
+
+For access to FRCCSC LAN, first install OpenVPN Connect:
+
+```sh
+brew install openvpn-connect
+```
+
+Add these lines to your issued FRCCSC profile and import it into OpenVPN
+Connect:
 
 ```text
 pull-filter ignore "block-outside-dns"
 dhcp-option DOMAIN frccsc.ru
 ```
 
-## Optional passwordless `sk`
-
-Requires Python 3 for the build. Install the main helper first, then:
-
-```sh
-brew install openconnect
-cp sk/openconnect.conf.example sk/openconnect.conf
-${EDITOR:-vi} sk/openconnect.conf
-./setup.sh build sk
-sudo ./setup.sh install sk
-mkdir -p ~/.local/bin
-install -m 700 sk/sk ~/.local/bin/sk
-```
-
-Set your `user=` and verify `servercert=pin-sha256:...` with IT. Keep the password
-in the login Keychain. In Keychain Access, add a password item with:
-
-- Name: `local.sk-vpn.vpn.skoltech.ru`
-- Account: the same login as `user=`
-- Password: your VPN password
-
-Put `~/.local/bin` in PATH and remove any older `sk` alias. Run `sk`; stop with
-Ctrl-C. The VPN stops automatically on the Skoltech LAN. `sk --check` tests
-authentication without a tunnel; Keychain may ask for access on first use.
-
-Both Homebrew locations are supported. To select a client explicitly, run
-`python3 sk/build.py --openconnect PATH`. The build copies OpenConnect and its
-libraries into a protected runtime. A restricted sudo rule permits only the
-fixed `connect` wrapper without arguments. Rebuild to update that runtime.
-The DNS hook preserves the upstream vpnc-script and scopes Skoltech DNS.
-
-To change the installed login or certificate pin, use:
-
-```sh
-sudo -e /Library/PrivilegedHelperTools/local.sk-vpn/openconnect.conf
-```
-
-## Check and remove
+## Testing
 
 ```sh
 base=/Library/PrivilegedHelperTools/local.vpn-coexist
+"$base/vpn-coexist" --check-config "$base/config.json"
 "$base/vpn-coexist" --status
-"$base/vpn-coexist" --inspect skoltech.ru
-scutil --dns
-host NAME
-route -n get ADDRESS
+"$base/vpn-coexist" --inspect
+dig +time=2 +tries=1 @127.0.0.1 example.com
+host example.com
+curl -4 -sS -o /dev/null -w 'HTTP %{http_code}\n' \
+  --connect-timeout 5 --max-time 10 https://chatgpt.com
+sk --check
 ```
 
-`--inspect` without a domain lists detected institutional LANs. Inspection is
-read-only. Status reports each institution as `lan`, `vpn` or `disconnected`;
-VPN status is inferred from published DNS. Errors also go to
-`/var/log/vpn-coexist.log`. dnsmasq logs use `/var/log/vpn-coexist-dns.log`.
-
-To edit installed settings, use `sudo -e "$base/config.json"`. Validate with
-`"$base/vpn-coexist" --check-config "$base/config.json"`; changes are picked up
-on the next update.
-
-The updater changes only its owned routes and stale configured endpoint routes.
-It repairs routes after DHCP address changes and preserves unrelated routes.
-dnsmasq listens on `127.0.0.1:53`; native DNS is retained if it is unavailable.
-IPv4 is supported; Bonjour `.local` stays with macOS. PTR records must exist
-on the LAN DNS server. Builds run offline regression tests from `tests.swift`.
-Check network changes on each recipient's Mac before relying on the setup.
-
-Stop `sk` before removal:
+Expect valid configuration, recent status with no errors, a DNS answer and an
+HTTP response. `--inspect` lists detected institutional LANs; `[]` is normal
+elsewhere. `sk --check` authenticates without changing routes or printing cookies.
+With both institutional VPNs connected off site, check:
 
 ```sh
-sudo ./setup.sh remove sk  # if installed
-sudo ./setup.sh remove
+host hilbert.skoltech.ru
+host login.hpc.frccsc.ru
+for target in hilbert login.hpc.frccsc.ru chatgpt.com google.com; do
+  route -n get "$target" | grep interface
+done
 ```
 
-Remove the user launcher and Keychain item separately. Logs are retained.
-To update binaries, remove, rebuild as your normal user, and install again.
-Share sources only: private configuration, profiles and build output are ignored.
+Compare the `interface` fields with your VPN clients and their routes:
+
+| Destination | Expected connection off site |
+| --- | --- |
+| `hilbert` | Skoltech tunnel |
+| `login.hpc.frccsc.ru` | FRCCSC tunnel |
+| `chatgpt.com` | Internet VPN tunnel |
+| `google.com` | Physical LAN if excluded from the internet VPN |
+
+Tunnel numbers (`utunN`) can change. On an institutional LAN, its hosts should
+use the physical interface instead. Hostnames can have several IP addresses;
+`route get` checks the address shown in its output.
+While `sk` is connected, a second `sk` must exit without starting another tunnel.
+SSH examples require your own aliases. Test a known LAN name too. Repeat after
+stopping `sk`, changing networks and sleep/wake. On each institutional LAN,
+status should report `lan` without that institution's VPN running.
+
+## Troubleshooting
+
+- Inspect `--status`, `scutil --dns`, `route -n get ADDRESS` and
+  `tail -n 30 /var/log/vpn-coexist*.log`.
+- If an IP works but its name fails, compare `dig @127.0.0.1 NAME` with
+  `dig @LAN_DNS NAME`. For short names, check LAN DNS and `scutil --dns`
+  search domains. Reverse lookup requires a PTR record on the LAN DNS server.
+- Check that `vpn_dns` uses a tunnel and DNS/firewall exceptions permit access.
+  This helper manages routes and DNS; VPN clients establish the connections.
+- For `sk`, check the login, Keychain item and certificate pin. To edit them:
+  `sudo vim /Library/PrivilegedHelperTools/local.sk-vpn/openconnect.conf`.
+- To change main settings, edit `config.json`, validate with
+  `"$base/vpn-coexist" --check-config config.json`, then run
+  `sudo install -o root -g wheel -m 644 config.json "$base/config.json"`.
+- If selected internet sites fail after wake and reconnecting fixes them,
+  update the internet VPN client. Test full-tunnel mode to isolate its
+  split-tunneling recovery; this helper does not reconnect VPN clients.
+
+To update binaries, remove, rebuild and reinstall. Rebuild `sk` to update its
+bundled OpenConnect runtime.
+
+## Uninstall
+
+Stop `sk` with Ctrl-C. If a VPN or Wi-Fi DNS server was manually set to
+`127.0.0.1`, restore normal DNS and reconnect that client first.
+
+```sh
+sudo ./setup.sh remove sk       # if the optional helper is installed
+sudo ./setup.sh remove
+rm -f ~/.local/bin/sk ~/Library/Caches/local.sk-vpn.lock
+```
+
+Remove any `sk` alias pointing to this launcher. To also delete the saved
+password, local build/configuration and logs:
+
+```sh
+account=$(sed -n 's/^user=//p' sk/openconnect.conf)
+security delete-generic-password -a "$account" \
+  -s local.sk-vpn.vpn.skoltech.ru "$HOME/Library/Keychains/login.keychain-db"
+unset account
+rm -rf build
+rm -f sk/openconnect.conf
+sudo rm -f /var/log/vpn-coexist.log /var/log/vpn-coexist-dns.log
+```
+
+Removal deletes owned routes, DNS resolver, firewall additions, services and
+installed files. VPN apps and issued profiles remain separate. Share sources
+only; private configuration and build output are ignored.
