@@ -515,8 +515,7 @@ final class Controller {
       }
       let domains = [""] + Array(Set(Array(scoped.keys) + networks.map { $0.domain })).sorted()
       resolver(["ServerAddresses": ["127.0.0.1"], "SearchDomains": searches,
-        "SupplementalMatchDomains": domains, "SupplementalMatchOrders": domains.map { _ in 1 },
-        "SupplementalMatchDomainsNoSearch": 1])
+        "SupplementalMatchDomains": domains, "SupplementalMatchOrders": domains.map { _ in 1 }])
     } catch { errors.append("Cannot update DNS: \(error)") }
   }
 
